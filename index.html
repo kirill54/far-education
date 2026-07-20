@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Обучение и аттестация инструкторов-проводников · Федерация альпинизма России</title>
+<meta name="description" content="Обучение по образовательным программам и аттестация инструкторов-проводников по альпинизму и горному туризму. Федерация альпинизма России." />
+<style>
+  :root{
+    --ink:#0f2233;
+    --ink-soft:#3a4b5c;
+    --muted:#6b7c8c;
+    --line:#e3e9ef;
+    --bg:#ffffff;
+    --bg-soft:#f5f8fb;
+    --brand:#0e5c8a;        /* alpine blue */
+    --brand-dark:#0a4066;
+    --brand-deep:#0b2f4a;
+    --accent:#e97132;       /* ФАР orange */
+    --accent-dark:#cf5e22;
+    --ok:#1f8a54;
+    --radius:14px;
+    --shadow:0 10px 30px rgba(11,47,74,.08);
+    --shadow-sm:0 4px 14px rgba(11,47,74,.06);
+    --wrap:1160px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;color:var(--ink);background:var(--bg);
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+  h1,h2,h3,h4{line-height:1.2;color:var(--ink);margin:0 0 .5em}
+  h2{font-size:clamp(24px,3vw,34px);letter-spacing:-.01em}
+  h3{font-size:20px}
+  p{margin:0 0 1em}
+  .wrap{max-width:var(--wrap);margin:0 auto;padding:0 20px}
+  .muted{color:var(--muted)}
+  .eyebrow{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+  section{padding:64px 0;border-top:1px solid var(--line)}
+  section:first-of-type{border-top:none}
+  .lead{font-size:18px;color:var(--ink-soft);max-width:760px}
+
+  /* ---------- buttons ---------- */
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:10px;
+    font-weight:600;font-size:15px;border:1px solid transparent;cursor:pointer;transition:.15s;text-decoration:none}
+  .btn:hover{text-decoration:none;transform:translateY(-1px)}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-dark)}
+  .btn-ghost{background:#fff;color:var(--brand-dark);border-color:var(--line)}
+  .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+  .btn-light{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.35)}
+  .btn-light:hover{background:rgba(255,255,255,.24)}
+
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:18px;height:66px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:800;color:var(--brand-deep);
+    letter-spacing:-.01em;white-space:nowrap}
+  .brand .mark{width:38px;height:38px;flex:0 0 auto}
+  .brand small{display:block;font-weight:600;font-size:11px;color:var(--muted);letter-spacing:.02em}
+  .menu{display:flex;align-items:center;gap:2px;margin-left:auto;flex-wrap:wrap}
+  .menu a{padding:8px 12px;border-radius:8px;color:var(--ink-soft);font-weight:600;font-size:14.5px}
+  .menu a:hover{background:var(--bg-soft);color:var(--brand-dark);text-decoration:none}
+  .menu a.svd{color:var(--brand-dark);border:1px solid var(--line)}
+  .menu a.svd:hover{border-color:var(--brand);background:#fff}
+  .menu-toggle{display:none}
+  .burger{display:none;margin-left:auto;cursor:pointer;padding:8px;border:1px solid var(--line);
+    border-radius:8px;background:#fff}
+  .burger span{display:block;width:22px;height:2px;background:var(--ink);margin:4px 0}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;color:#fff;border-top:none;padding:0;overflow:hidden;
+    background:linear-gradient(160deg,#0b2f4a 0%,#0e5c8a 60%,#137aa8 100%)}
+  .hero .wrap{position:relative;z-index:2;padding-top:70px;padding-bottom:110px}
+  .hero svg.mtn{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:auto;z-index:1;display:block}
+  .hero h1{color:#fff;font-size:clamp(28px,4.4vw,52px);max-width:16ch;margin-bottom:.35em;
+    overflow-wrap:break-word;word-break:break-word;hyphens:auto}
+  .hero p.sub{color:#dbe9f3;font-size:19px;max-width:60ch}
+  .hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+  .notice{display:flex;gap:12px;align-items:flex-start;background:rgba(233,113,50,.16);
+    border:1px solid rgba(233,113,50,.5);padding:14px 16px;border-radius:12px;margin-top:30px;max-width:720px}
+  .notice b{color:#ffd9c2}
+  .notice .ic{flex:0 0 auto;font-size:20px}
+
+  /* ---------- generic grid / cards ---------- */
+  .grid{display:grid;gap:22px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:26px;box-shadow:var(--shadow-sm)}
+  .card h3{margin-top:6px}
+  .soft{background:var(--bg-soft)}
+
+  /* two paths */
+  .path{position:relative;overflow:hidden;border-radius:var(--radius);padding:30px;color:#fff;
+    display:flex;flex-direction:column;min-height:260px}
+  .path.learn{background:linear-gradient(150deg,#0e5c8a,#0b2f4a)}
+  .path.attest{background:linear-gradient(150deg,#e97132,#cf5e22)}
+  .path h3{color:#fff;font-size:24px}
+  .path p{color:rgba(255,255,255,.9)}
+  .path ul{margin:0 0 20px;padding-left:18px;color:rgba(255,255,255,.92)}
+  .path li{margin-bottom:6px}
+  .path .btn{margin-top:auto;align-self:flex-start}
+  .path .num{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+
+  /* program cards */
+  .prog{display:flex;flex-direction:column;height:100%}
+  .prog .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.04em;
+    padding:4px 10px;border-radius:999px;margin-bottom:12px;text-transform:uppercase}
+  .tag-dpo{background:#e3f0f7;color:var(--brand-dark)}
+  .tag-po{background:#fdeadf;color:var(--accent-dark)}
+  .prog .meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin:12px 0 16px;font-size:14px;color:var(--muted)}
+  .prog .meta b{color:var(--ink)}
+  .prog .files{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+  .file{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);
+    border-radius:10px;font-size:14px;color:var(--ink-soft);background:var(--bg-soft)}
+  .file:hover{border-color:var(--brand);color:var(--brand-dark);text-decoration:none}
+  .file .ico{flex:0 0 auto}
+
+  /* steps */
+  .steps{counter-reset:s;display:grid;gap:16px;grid-template-columns:repeat(5,1fr)}
+  .step{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 18px 18px}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;top:-16px;left:18px;
+    width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;
+    display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm)}
+  .step h4{margin:12px 0 6px;font-size:16px}
+  .step p{font-size:14px;color:var(--muted);margin:0}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:var(--radius);overflow:hidden;
+    box-shadow:var(--shadow-sm);font-size:15px}
+  th,td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line)}
+  thead th{background:var(--brand-deep);color:#fff;font-weight:600}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:nth-child(even){background:var(--bg-soft)}
+  td.num,th.num{text-align:center;white-space:nowrap}
+
+  /* schedule */
+  .sched{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+  .ev{display:flex;gap:16px;align-items:center;background:#fff;border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px}
+  .ev .date{flex:0 0 auto;text-align:center;background:var(--bg-soft);border-radius:10px;padding:8px 12px;
+    min-width:74px}
+  .ev .date .d{font-size:24px;font-weight:800;color:var(--brand-dark);line-height:1}
+  .ev .date .m{font-size:12px;color:var(--muted);text-transform:uppercase}
+  .ev .txt{font-size:14px}
+  .ev .txt b{display:block}
+  .regions{display:grid;gap:12px;grid-template-columns:repeat(3,1fr);margin-top:22px}
+  .region{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .region h4{margin:0 0 4px;font-size:15px;color:var(--brand-dark)}
+  .region span{font-size:14px;color:var(--muted)}
+
+  /* svedeniya */
+  .svd-wrap{background:linear-gradient(135deg,#0b2f4a,#0e5c8a);border-radius:var(--radius);
+    padding:34px;color:#fff}
+  .svd-wrap h2{color:#fff}
+  .svd-grid{display:grid;gap:10px;grid-template-columns:repeat(3,1fr);margin:22px 0}
+  .svd-grid a{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:12px 14px;color:#eaf3fa;
+    font-size:14px;font-weight:500}
+  .svd-grid a:hover{background:rgba(255,255,255,.16);text-decoration:none}
+  .lic{display:flex;flex-wrap:wrap;gap:16px;align-items:center;background:rgba(255,255,255,.1);
+    border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:16px 20px;margin-top:8px}
+  .lic .big{font-size:15px}
+  .lic .big b{font-size:18px}
+
+  /* docs accordion */
+  details{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+  details summary{cursor:pointer;padding:16px 20px;font-weight:600;list-style:none;display:flex;
+    align-items:center;justify-content:space-between;color:var(--brand-deep)}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"+";font-size:22px;color:var(--muted);font-weight:400}
+  details[open] summary::after{content:"–"}
+  details .body{padding:0 20px 18px}
+  details ul{margin:0;padding-left:20px}
+  details li{margin-bottom:8px;color:var(--ink-soft)}
+
+  /* contacts / footer */
+  footer{background:var(--brand-deep);color:#cfe0ec;padding:56px 0 30px}
+  footer h2,footer h4{color:#fff}
+  .foot-grid{display:grid;gap:28px;grid-template-columns:1.4fr 1fr 1fr}
+  .foot-grid a{color:#cfe0ec}
+  .foot-grid a:hover{color:#fff}
+  .foot-item{margin-bottom:14px}
+  .foot-item .lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7fa6c2;margin-bottom:2px}
+  .foot-bottom{border-top:1px solid rgba(255,255,255,.12);margin-top:36px;padding-top:20px;
+    display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:13px;color:#8fb0c8}
+  .foot-bottom a{color:#cfe0ec}
+
+  .callout{background:var(--bg-soft);border-left:4px solid var(--accent);border-radius:8px;
+    padding:16px 20px;margin-top:10px}
+
+  /* responsive */
+  @media(max-width:960px){
+    .g4{grid-template-columns:repeat(2,1fr)}
+    .steps{grid-template-columns:repeat(2,1fr)}
+    .svd-grid{grid-template-columns:repeat(2,1fr)}
+    .regions{grid-template-columns:repeat(2,1fr)}
+    .foot-grid{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:720px){
+    .menu{display:none;position:absolute;top:66px;left:0;right:0;flex-direction:column;align-items:stretch;
+      background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;gap:4px;box-shadow:var(--shadow)}
+    .menu-toggle:checked ~ .menu{display:flex}
+    .burger{display:block}
+    .g2,.g3,.g4,.sched,.svd-grid,.regions,.foot-grid{grid-template-columns:1fr}
+    .steps{grid-template-columns:1fr}
+    section{padding:48px 0}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="wrap">
+    <input type="checkbox" id="menu-toggle" class="menu-toggle" hidden />
+    <nav class="nav">
+      <a class="brand" href="#top">
+        <svg class="mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="24" cy="24" r="23" fill="#0e5c8a"/>
+          <path d="M9 34 L21 15 L27 25 L31 19 L39 34 Z" fill="#fff"/>
+          <path d="M21 15 L25 21 L23 24 L18.5 22 Z" fill="#e97132"/>
+        </svg>
+        <span>ФАР · Обучение и аттестация<small>Федерация альпинизма России</small></span>
+      </a>
+      <label class="burger" for="menu-toggle" aria-label="Меню"><span></span><span></span><span></span></label>
+      <div class="menu">
+        <a href="#obuchenie">Обучение</a>
+        <a href="#attestaciya">Аттестация</a>
+        <a href="#ekzameny">Экзамены</a>
+        <a href="#stoimost">Стоимость</a>
+        <a href="#raspisanie">Расписание</a>
+        <a href="#dokumenty">Документы</a>
+        <a href="#kontakty">Контакты</a>
+        <a class="svd" href="#svedeniya">Сведения об образовательной организации</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <span class="eyebrow" style="color:#ffd9c2">Альпинизм и горный туризм</span>
+    <h1>Обучение и аттестация инструкторов‑проводников</h1>
+    <p class="sub">Профессиональные образовательные программы и квалификационный экзамен для допуска
+      к сопровождению туристов на маршрутах, требующих специального сопровождения. Официально —
+      уполномоченной федерацией (ФАР).</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#attestaciya">Подать заявление на аттестацию</a>
+      <a class="btn btn-light" href="#obuchenie">Пройти обучение</a>
+    </div>
+    <div class="notice">
+      <span class="ic">⏳</span>
+      <div>Все инструкторы, внесённые в Государственный реестр по спискам туроператоров,
+        должны <b>пройти аттестацию до 01.10.2026</b>. <a href="#attestaciya" style="color:#fff;text-decoration:underline">Подробнее →</a></div>
+    </div>
+  </div>
+  <svg class="mtn" viewBox="0 0 1440 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M0 120 L0 70 L220 20 L360 75 L560 15 L760 85 L980 30 L1180 80 L1440 35 L1440 120 Z" fill="#ffffff"/>
+  </svg>
+</section>
+
+<!-- ============ ДВА ПУТИ ============ -->
+<section id="paths">
+  <div class="wrap">
+    <span class="eyebrow">С чего начать</span>
+    <h2>Два пути — обучение и аттестация</h2>
+    <p class="lead">Если у вас ещё нет профессиональной подготовки — сначала пройдите обучение по
+      образовательной программе. Если подготовка и опыт уже есть — можно сразу подавать заявление на
+      квалификационный экзамен (аттестацию).</p>
+    <div class="grid g2" style="margin-top:26px">
+      <div class="path learn">
+        <span class="num">Шаг 1 (при необходимости)</span>
+        <h3>Обучение по программе</h3>
+        <p>Получение профессии или повышение квалификации по официальным программам с выдачей документа
+          установленного образца.</p>
+        <ul>
+          <li>Профессиональная переподготовка — 256 ч</li>
+          <li>Повышение квалификации — 72 ч</li>
+          <li>Все виды рельефа + модуль «short‑roping»</li>
+        </ul>
+        <a class="btn btn-light" href="#obuchenie">Смотреть программы →</a>
+      </div>
+      <div class="path attest">
+        <span class="num">Шаг 2 — обязательно</span>
+        <h3>Аттестация (квал. экзамен)</h3>
+        <p>Присвоение квалификации «инструктор‑проводник» с внесением в Единый федеральный реестр —
+          обязательное условие для работы.</p>
+        <ul>
+          <li>Теоретическая часть (дистанционно)</li>
+          <li>Практическая часть (очно, по регионам)</li>
+          <li>Внесение в государственный реестр</li>
+        </ul>
+        <a class="btn btn-light" href="#attestaciya">Порядок аттестации →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ОБУЧЕНИЕ ============ -->
+<section id="obuchenie" class="soft">
+  <div class="wrap">
+    <span class="eyebrow">Образовательные программы</span>
+    <h2>Обучение</h2>
+    <p class="lead">Обучение реализуется на основании лицензии на образовательную деятельность.
+      Ниже — два типа программ. Выберите тот, который подходит именно вам.</p>
+
+    <div class="callout">
+      <b>Чем отличаются типы программ?</b><br>
+      <b>Дополнительные профессиональные программы (ДПО)</b> — для лиц, уже имеющих среднее
+      профессиональное или высшее образование. <b>Программы профессионального обучения</b> — для
+      получения профессии рабочего / должности служащего (наличие СПО/ВО не требуется). По итогу
+      обучения выдаётся документ установленного образца.
+    </div>
+
+    <!-- ДПО -->
+    <h3 style="margin:34px 0 4px">Дополнительное профессиональное образование<br><span class="muted" style="font-weight:400;font-size:15px">(Приказ Минобрнауки России № 266)</span></h3>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card prog">
+        <span class="tag tag-dpo">Профессиональная переподготовка</span>
+        <h3>Инструктор‑проводник по альпинизму и горному туризму</h3>
+        <p class="muted">Комплексная программа для получения новой квалификации: техника на всех видах
+          рельефа, безопасность, оказание первой помощи, работа с клиентом, модуль «short‑roping».</p>
+        <div class="meta"><span>Объём: <b>256 ч</b></span><span>Форма: <b>очно‑заочная</b></span><span>Итог: <b>диплом о профпереподготовке</b></span></div>
+        <div class="files">
+          <a class="file" href="ДПП_профпереподготовка_инструктор-проводник_по_Приказу-266_256ч.pdf" target="_blank"><span class="ico">📄</span> ДПП: учебный план, календарный график, рабочие программы, оценочные и методические материалы</a>
+          <a class="file" href="#svedeniya"><span class="ico">ℹ️</span> Характеристика квалификации и компетенций, учёт профстандарта</a>
+        </div>
+      </div>
+      <div class="card prog">
+        <span class="tag tag-dpo">Повышение квалификации</span>
+        <h3>Актуализация компетенций инструктора‑проводника</h3>
+        <p class="muted">Для действующих специалистов: обновление знаний по безопасности, новым
+          требованиям и технике, включая модуль «short‑roping».</p>
+        <div class="meta"><span>Объём: <b>72 ч</b></span><span>Форма: <b>очно‑заочная</b></span><span>Итог: <b>удостоверение о ПК</b></span></div>
+        <div class="files">
+          <a class="file" href="Программа_повышение_квалификации_72ч.pdf" target="_blank"><span class="ico">📄</span> Программа повышения квалификации (72 ч)</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Профобучение -->
+    <h3 style="margin:38px 0 4px">Профессиональное обучение<br><span class="muted" style="font-weight:400;font-size:15px">(Приказ Минпросвещения России № 438)</span></h3>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card prog">
+        <span class="tag tag-po">Профессиональная переподготовка</span>
+        <h3>Программа профессионального обучения — 256 ч</h3>
+        <p class="muted">Программа для получения профессии инструктора‑проводника: все типы рельефа
+          (снежный, ледовый, скальный, комбинированный, ски‑альпинизм и фрирайд) и модуль «short‑roping».</p>
+        <div class="meta"><span>Объём: <b>256 ч</b></span><span>Форма: <b>очно‑заочная</b></span><span>Итог: <b>свидетельство о профессии</b></span></div>
+        <div class="files">
+          <a class="file" href="Программа_профобучения_переподготовка_инструктор-проводник_256ч.pdf" target="_blank"><span class="ico">📄</span> Программа профобучения — переподготовка (256 ч)</a>
+        </div>
+      </div>
+      <div class="card prog">
+        <span class="tag tag-po">Повышение квалификации</span>
+        <h3>Программа профессионального обучения — 72 ч</h3>
+        <p class="muted">Повышение квалификации по профессии инструктора‑проводника с сохранением
+          модуля «short‑roping» и охватом всех видов рельефа.</p>
+        <div class="meta"><span>Объём: <b>72 ч</b></span><span>Форма: <b>очно‑заочная</b></span><span>Итог: <b>свидетельство / справка</b></span></div>
+        <div class="files">
+          <a class="file" href="Программа_профобучения_повышение_квалификации_инструктор-проводник_72ч.pdf" target="_blank"><span class="ico">📄</span> Программа профобучения — повышение квалификации (72 ч)</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Первая помощь -->
+    <h3 style="margin:38px 0 4px">Сопутствующая программа<br><span class="muted" style="font-weight:400;font-size:15px">(подготовка по оказанию первой помощи — необходима для аттестации)</span></h3>
+    <div class="card prog" style="margin-top:16px;border-color:#f3c9b3;background:linear-gradient(180deg,#fff,#fdf6f1)">
+      <span class="tag tag-po">Повышение квалификации · 72 ч</span>
+      <h3>Оказание первой помощи пострадавшим в условиях природной (горной) среды</h3>
+      <p class="muted">Программа с обязательной очной отработкой навыков: базовая СЛР и АНД, кровотечения
+        и раны, иммобилизация и транспортировка, термические и холодовые поражения, высотная патология,
+        действия в автономности и взаимодействие с ПСС/МЧС. Разработана с учётом действующего Порядка
+        оказания первой помощи (Приказ Минздрава России № 220н). Медицинское образование не требуется.</p>
+      <div class="meta">
+        <span>Объём: <b>72 ч</b></span>
+        <span>Практика: <b>≥ 70%</b></span>
+        <span>Итог: <b>удостоверение о ПК</b></span>
+        <span>Документ: <b>подтверждает подготовку по первой помощи</b></span>
+      </div>
+      <div class="files">
+        <a class="file" href="ДПП_повышение_квалификации_первая_помощь_72ч.pdf" target="_blank"><span class="ico">🚑</span> Программа «Оказание первой помощи» (72 ч): учебный план, график, содержание, оценочные материалы</a>
+      </div>
+    </div>
+
+    <div style="margin-top:26px">
+      <a class="btn btn-primary" href="#kontakty">Записаться на обучение</a>
+      <a class="btn btn-ghost" href="#svedeniya">Раздел «Образование» и все документы →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ АТТЕСТАЦИЯ ============ -->
+<section id="attestaciya">
+  <div class="wrap">
+    <span class="eyebrow">Квалификационный экзамен</span>
+    <h2>Аттестация</h2>
+    <p class="lead">Аттестация инструкторов‑проводников проводится общероссийскими спортивными
+      федерациями (ФАР, ФСТР, ФПСР) согласно перечню, утверждённому Правительством РФ
+      (Федеральный закон № 63‑ФЗ от 23.03.2024).</p>
+
+    <!-- требования -->
+    <h3 style="margin-top:30px">Требования к соискателю</h3>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card">
+        <h4>Необходимый опыт</h4>
+        <ul>
+          <li>2‑й спортивный разряд и выше по альпинизму или спортивному туризму, <b>либо</b></li>
+          <li>опыт 12 восхождений (не менее 2 — соответствующей категории), <b>либо</b></li>
+          <li>3 горных туристских маршрута (2 — соответствуют, 1 — превышает; из них 1 — в качестве руководителя);</li>
+          <li>отсутствие медицинских противопоказаний и судимости.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Необходимые документы</h4>
+        <ul>
+          <li>Подтверждение опыта (книжка альпиниста/туриста или заверенный список восхождений/маршрутов);</li>
+          <li>Документ о профессиональном обучении (удостоверение инструктора‑проводника ФАР/ФСТР) либо стаж ≥ 5 лет;</li>
+          <li>Документ о подготовке по оказанию первой помощи (можно получить по <a href="#obuchenie">программе ФАР «Оказание первой помощи», 72 ч</a>);</li>
+          <li>Медицинское заключение об отсутствии противопоказаний;</li>
+          <li>Справка об отсутствии судимости.</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:14px"><a class="btn btn-ghost" href="#dokumenty">Полный список требований и документов →</a></p>
+
+    <!-- порядок -->
+    <h3 style="margin-top:40px">Порядок прохождения аттестации</h3>
+    <div class="steps" style="margin-top:28px">
+      <div class="step"><h4>Подготовка</h4><p>Собрать документы, выбрать виды рельефа, категорию и место экзамена, заполнить заявление.</p></div>
+      <div class="step"><h4>Договор</h4><p>Подать электронную форму со сканами, получить подтверждение и проект договора, подписать.</p></div>
+      <div class="step"><h4>Тестирование</h4><p>Оплата 1‑й части, теоретический экзамен дистанционно, приглашение на практику.</p></div>
+      <div class="step"><h4>Практика</h4><p>Полная оплата, приезд в центр аттестации, практическая часть экзамена.</p></div>
+      <div class="step"><h4>Реестр</h4><p>Присвоение квалификации, доступ в реестр через ЕСИА, печать именного бейджа.</p></div>
+    </div>
+    <div class="callout" style="margin-top:24px">
+      <b>Обратите внимание:</b> экзамены по подвиду «ски‑альпинизм и фрирайд» проходят отдельно от иных
+      подвидов. Квалификация «выше 5700 м» присваивается автоматически при подтверждённом высотном опыте
+      и положительном результате аттестации.
+    </div>
+    <div style="margin-top:22px">
+      <a class="btn btn-primary" href="#kontakty">Заполнить электронную форму и подать заявление</a>
+      <a class="btn btn-ghost" href="#dokumenty">Рекомендации по прохождению аттестации →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ЭКЗАМЕНЫ ============ -->
+<section id="ekzameny" class="soft">
+  <div class="wrap">
+    <span class="eyebrow">Квалификационные экзамены</span>
+    <h2>Экзамены: порядок и билеты</h2>
+    <div class="grid g2" style="margin-top:22px">
+      <div class="card">
+        <h3>Теоретическая часть</h3>
+        <p class="muted">Заочно‑дистанционный формат после проверки документов и предоплаты.</p>
+        <ul>
+          <li>Доступ в электронную систему в день экзамена;</li>
+          <li>60 минут на ответы по билетам;</li>
+          <li>для сдачи — 20 правильных ответов из 25;</li>
+          <li>при успехе — приглашение на практическую часть.</li>
+        </ul>
+        <div class="files" style="margin-top:8px">
+          <a class="file" href="#" ><span class="ico">📝</span> Билеты теоретической части (для ознакомления)</a>
+          <a class="file" href="#" ><span class="ico">🎿</span> Билеты теории — ски‑альпинизм (для ознакомления)</a>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Практическая часть</h3>
+        <p class="muted">Очный формат в одном из центров по регионам аттестации.</p>
+        <ul>
+          <li>Приезд в согласованные даты с полным комплектом документов;</li>
+          <li>своё снаряжение и экипировка (аренда — уточнять заранее);</li>
+          <li>экзамен на выбранных типах рельефа;</li>
+          <li>при успехе — присвоение квалификации и внесение в реестр.</li>
+        </ul>
+        <div class="files" style="margin-top:8px">
+          <a class="file" href="Методические_указания_практическая_часть_ФИНАЛ.pdf" target="_blank"><span class="ico">📘</span> Методические указания и билеты практической части</a>
+          <a class="file" href="#" ><span class="ico">🎿</span> Билеты практики — ски‑альп и фрирайд</a>
+          <a class="file" href="#" ><span class="ico">🎒</span> Необходимое снаряжение и экипировка</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ СТОИМОСТЬ ============ -->
+<section id="stoimost">
+  <div class="wrap">
+    <span class="eyebrow">Оплата</span>
+    <h2>Стоимость аттестации</h2>
+    <p class="muted">Зависит от видов рельефа и категорий сложности. Не включает проезд, проживание и питание.</p>
+    <table style="margin-top:18px">
+      <thead>
+        <tr><th>Виды рельефа</th><th class="num">Категории I–II</th><th class="num">Категории III–VI</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Снежный и ледовый</td><td class="num">37 000 ₽</td><td class="num">47 000 ₽</td></tr>
+        <tr><td>Скальный</td><td class="num">37 000 ₽</td><td class="num">47 000 ₽</td></tr>
+        <tr><td>Комбинированный (снежный, ледовый и скальный)</td><td class="num">45 000 ₽</td><td class="num">58 000 ₽</td></tr>
+        <tr><td>Ски‑альпинизм и фрирайд</td><td class="num">37 000 ₽</td><td class="num">47 000 ₽</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" style="margin-top:20px">
+      <b>Стоимость обучения по образовательным программам</b> утверждается отдельным приказом.
+      <a href="Приказ_об_утверждении_стоимости_обучения.pdf" target="_blank">Приказ об утверждении стоимости обучения по образовательным программам →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ РАСПИСАНИЕ ============ -->
+<section id="raspisanie" class="soft">
+  <div class="wrap">
+    <span class="eyebrow">Календарь</span>
+    <h2>Расписание экзаменов</h2>
+    <h3 style="margin-top:20px">Теоретическая часть (заочно‑дистанционно)</h3>
+    <div class="sched" style="margin-top:14px">
+      <div class="ev"><div class="date"><div class="d">24</div><div class="m">Дек 2025</div></div><div class="txt"><b>Квалификационный экзамен</b>Теоретическая часть · заочно <a href="#kontakty">Подать заявление →</a></div></div>
+      <div class="ev"><div class="date"><div class="d">07</div><div class="m">Янв 2026</div></div><div class="txt"><b>Квалификационный экзамен</b>Теоретическая часть · заочно <a href="#kontakty">Подать заявление →</a></div></div>
+      <div class="ev"><div class="date"><div class="d">21</div><div class="m">Янв 2026</div></div><div class="txt"><b>Квалификационный экзамен</b>Теоретическая часть · заочно <a href="#kontakty">Подать заявление →</a></div></div>
+      <div class="ev"><div class="date"><div class="d">04</div><div class="m">Фев 2026</div></div><div class="txt"><b>Квалификационный экзамен</b>Теоретическая часть · заочно <a href="#kontakty">Подать заявление →</a></div></div>
+    </div>
+
+    <h3 style="margin-top:34px">Практическая часть — центры по регионам</h3>
+    <div class="regions">
+      <div class="region"><h4>Регион Кавказ</h4><span>Адыл‑Су</span></div>
+      <div class="region"><h4>Регион Сибирь</h4><span>Актру</span></div>
+      <div class="region"><h4>Регион Дальний Восток</h4><span>Камчатка</span></div>
+      <div class="region"><h4>Регион Крым</h4><span>Севастопольский сектор ЮБК</span></div>
+      <div class="region"><h4>Ски‑альпинизм и фрирайд</h4><span>по отдельному графику</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ СВЕДЕНИЯ ОБ ОБРАЗОВАТЕЛЬНОЙ ОРГАНИЗАЦИИ ============ -->
+<section id="svedeniya">
+  <div class="wrap">
+    <div class="svd-wrap">
+      <span class="eyebrow" style="color:#ffd9c2">Обязательный раздел</span>
+      <h2>Сведения об образовательной организации</h2>
+      <p style="color:#dbe9f3;max-width:70ch">Раздел размещён в соответствии с требованиями к структуре
+        официального сайта образовательной организации. Здесь — все обязательные подразделы, лицензия,
+        локальные нормативные акты и сведения об образовательных программах.</p>
+
+      <div class="lic">
+        <span style="font-size:34px">📜</span>
+        <div class="big">Лицензия на осуществление образовательной деятельности<br>
+          <b>№ Л035‑01298‑77/00183620</b></div>
+        <a class="btn btn-light" href="#" target="_blank" style="margin-left:auto">Копия лицензии (PDF) →</a>
+      </div>
+
+      <div class="svd-grid">
+        <a href="/svedeniya/#osnovnye">📌 Основные сведения</a>
+        <a href="/svedeniya/#struktura">🏛️ Структура и органы управления</a>
+        <a href="/svedeniya/#documents">📁 Документы (устав, ЛНА, отчёты)</a>
+        <a href="/svedeniya/#education">🎓 Образование (программы, планы, графики)</a>
+        <a href="/svedeniya/#standards">📐 Образовательные стандарты и требования</a>
+        <a href="/svedeniya/#management">👤 Руководство. Педагогический состав</a>
+        <a href="/svedeniya/#mtb">🧗 Материально‑техническое обеспечение</a>
+        <a href="/svedeniya/#paid">💳 Платные образовательные услуги</a>
+        <a href="/svedeniya/#finance">📊 Финансово‑хозяйственная деятельность</a>
+        <a href="/svedeniya/#vacant">🪑 Вакантные места для приёма</a>
+        <a href="/svedeniya/#sreda">♿ Доступная среда</a>
+        <a href="/svedeniya/#international">🌍 Международное сотрудничество</a>
+      </div>
+
+      <p style="color:#dbe9f3;margin:0"><b style="color:#fff">В подразделе «Образование»</b> опубликован
+        состав ДПП: учебный план, календарный учебный график, рабочие программы дисциплин (модулей),
+        оценочные и методические материалы, характеристика квалификации и компетенций, учёт
+        профессионального стандарта «Инструктор‑проводник» (Приказ Минтруда № 914н), условия реализации.</p>
+      <a class="btn btn-light" href="/svedeniya/" style="margin-top:18px">Перейти в раздел «Сведения об образовательной организации» →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ДОКУМЕНТЫ ============ -->
+<section id="dokumenty" class="soft">
+  <div class="wrap">
+    <span class="eyebrow">Нормативная база</span>
+    <h2>Документы</h2>
+    <p class="muted">Регламентируют аттестацию и деятельность инструкторов‑проводников.</p>
+
+    <div style="margin-top:20px">
+      <details open>
+        <summary>Федеральные законы</summary>
+        <div class="body"><ul>
+          <li>ФЗ № 63‑ФЗ от 23.03.2024 «О внесении изменений в ФЗ „Об основах туристской деятельности в РФ“ и отдельные законодательные акты РФ»</li>
+          <li>Федеральный закон № 132‑ФЗ «Об основах туристской деятельности в Российской Федерации»</li>
+        </ul></div>
+      </details>
+      <details>
+        <summary>Постановления Правительства</summary>
+        <div class="body"><ul>
+          <li>ПП РФ № 1003 (ред. от 01.06.2024) «Об утверждении Положения об аттестации инструкторов‑проводников»</li>
+          <li>ПП РФ № 761 от 01.06.2024 «Об утверждении Правил оказания услуг инструктора‑проводника»</li>
+          <li>ПП РФ № 760 от 01.06.2024 «Об уведомлениях о сопровождении туристов на туристском маршруте, требующем специального сопровождения»</li>
+        </ul></div>
+      </details>
+      <details>
+        <summary>Распоряжения Правительства и подзаконные акты</summary>
+        <div class="body"><ul>
+          <li>РП РФ № 1365‑р от 01.06.2024 — перечень видов туристских маршрутов, требующих специального сопровождения, и категории их сложности</li>
+          <li>Приказ Минэкономразвития РФ № 340 от 31.05.2024 — порядок отнесения маршрута к требующим специального сопровождения</li>
+        </ul></div>
+      </details>
+      <details>
+        <summary>Образовательные требования (Минобразования)</summary>
+        <div class="body"><ul>
+          <li>Приказ Минобрнауки России № 266 — порядок организации ДПО (переподготовка 256 ч, повышение квалификации 72 ч)</li>
+          <li>Приказ Минпросвещения России № 438 — порядок организации профессионального обучения</li>
+          <li>Профессиональный стандарт «Инструктор‑проводник» (утв. приказом Минтруда России № 914н от 24.12.2021, код 33.023)</li>
+        </ul></div>
+      </details>
+      <details>
+        <summary>Документы и регламенты ФАР</summary>
+        <div class="body"><ul>
+          <li>Правила соотнесения количества инструкторов‑проводников и туристов в группе</li>
+          <li>Положение об аттестации инструкторов‑проводников</li>
+          <li>Сведения о составе аттестационной комиссии</li>
+          <li>Методические указания к практической части квалификационного экзамена</li>
+        </ul></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ТУРОПЕРАТОРАМ ============ -->
+<section id="tour">
+  <div class="wrap">
+    <span class="eyebrow">Информация для туроператоров</span>
+    <h2>Аттестация работающих инструкторов с внесением в реестр</h2>
+    <div class="grid g2" style="margin-top:20px">
+      <div class="card">
+        <h4>Порядок действий туроператора</h4>
+        <ol style="padding-left:20px;margin:0">
+          <li>Обязать инструктора‑кандидата заполнить заявление на аттестацию.</li>
+          <li>Согласовать список кандидатов и даты экзаменов: <a href="mailto:instructor@alpfederation.ru">instructor@alpfederation.ru</a>.</li>
+          <li>По вопросам — тел. <a href="tel:+74994040146">+7 (499) 40‑40‑146</a>.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h4>Критерии для туроператора</h4>
+        <ul style="margin:0">
+          <li>Действующая компания в Реестре Туроператоров;</li>
+          <li>туроператор по внутреннему туризму;</li>
+          <li>формирует туры в сфере горного туризма и альпинизма (включая ски‑альпинизм и фрирайд).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:20px">Все кандидаты, внесённые в Государственный реестр по спискам туроператоров, должны пройти аттестацию <b>до 01.10.2026</b>.</div>
+  </div>
+</section>
+
+<!-- ============ FOOTER / КОНТАКТЫ ============ -->
+<footer id="kontakty">
+  <div class="wrap">
+    <span class="eyebrow" style="color:#ffd9c2">Контакты</span>
+    <h2>Федерация альпинизма России</h2>
+    <div class="foot-grid" style="margin-top:24px">
+      <div>
+        <div class="foot-item"><div class="lbl">Почтовый адрес</div>119017, г. Москва, Мал. Толмачёвский пер., 8/11, стр. 1</div>
+        <div class="foot-item"><div class="lbl">Справочный центр</div><a href="tel:+74994040146">+7 (499) 40‑40‑146</a></div>
+        <div class="foot-item"><div class="lbl">Электронная почта</div><a href="mailto:instructor@alpfederation.ru">instructor@alpfederation.ru</a></div>
+      </div>
+      <div>
+        <div class="foot-item"><div class="lbl">Мессенджеры</div>
+          <a href="https://t.me/instructor_alpfederation" target="_blank">Telegram @instructor_alpfederation</a><br>
+          <a href="https://wa.me/79671285520" target="_blank">WhatsApp</a>
+        </div>
+        <div class="foot-item"><div class="lbl">Быстрые действия</div>
+          <a href="#attestaciya">Подать заявление на аттестацию</a><br>
+          <a href="#obuchenie">Записаться на обучение</a>
+        </div>
+      </div>
+      <div>
+        <div class="foot-item"><div class="lbl">Разделы</div>
+          <a href="#obuchenie">Обучение</a> · <a href="#attestaciya">Аттестация</a><br>
+          <a href="#stoimost">Стоимость</a> · <a href="#raspisanie">Расписание</a><br>
+          <a href="#dokumenty">Документы</a>
+        </div>
+        <div class="foot-item"><div class="lbl">Образовательная организация</div>
+          <a href="#svedeniya"><b>Сведения об образовательной организации</b></a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2024–2026 Федерация альпинизма России</span>
+      <span><a href="#svedeniya">Сведения об образовательной организации</a> · <a href="#dokumenty">Документы</a></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
