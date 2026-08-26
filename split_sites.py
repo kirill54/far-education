@@ -22,29 +22,38 @@ SRC = ROOT / "index.html"
 ALP_DIR = ROOT / "alpinizm"
 SKI_DIR = ROOT / "ski"
 
-TRACK_NAV_ALP = (
-        '<a class="dh-track" href="../" style="padding:9px 13px;border-radius:8px;color:#3b4650;'
-        'font-weight:500;font-size:15px">Все направления</a>\n'
-        '        <a href="./" style="padding:9px 13px;border-radius:8px;color:#fff;font-weight:600;'
-        'font-size:15px;background:#1466a8">Альпинизм и ГТ</a>\n'
-        '        <a class="dh-track" href="../ski/" style="padding:9px 13px;border-radius:8px;'
-        'color:#3b4650;font-weight:500;font-size:15px">Ски-альпинизм</a>\n'
-        '        <span style="width:1px;height:22px;background:#d5dbe1;margin:0 6px"></span>\n        '
-)
+TOPBAR_ALP = '''<header style="position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e9edf1">
+  <div style="background:#0b2f4a;color:#fff">
+    <div style="max-width:1200px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:36px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.75">Направление</span>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:auto">
+        <a href="../" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.78)">Все направления</a>
+        <a href="./" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:600;color:#fff;background:rgba(255,255,255,.16)">Альпинизм и ГТ</a>
+        <a href="../ski/" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.78)">Ски-альпинизм</a>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1200px;margin:0 auto;padding:0 28px">
+    <nav style="display:flex;align-items:center;gap:22px;min-height:64px;flex-wrap:nowrap">'''
 
-TRACK_NAV_SKI = (
-        '<a class="dh-track" href="../" style="padding:9px 13px;border-radius:8px;color:#3b4650;'
-        'font-weight:500;font-size:15px">Все направления</a>\n'
-        '        <a class="dh-track" href="../alpinizm/" style="padding:9px 13px;border-radius:8px;'
-        'color:#3b4650;font-weight:500;font-size:15px">Альпинизм и ГТ</a>\n'
-        '        <a href="./" style="padding:9px 13px;border-radius:8px;color:#fff;font-weight:600;'
-        'font-size:15px;background:#0b2f4a">Ски-альпинизм</a>\n'
-        '        <span style="width:1px;height:22px;background:#d5dbe1;margin:0 6px"></span>\n        '
-)
+TOPBAR_SKI = '''<header style="position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e9edf1">
+  <div style="background:#0b2f4a;color:#fff">
+    <div style="max-width:1200px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:36px;flex-wrap:wrap">
+      <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.75">Направление</span>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:auto">
+        <a href="../" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.78)">Все направления</a>
+        <a href="../alpinizm/" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.78)">Альпинизм и ГТ</a>
+        <a href="./" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:600;color:#fff;background:rgba(255,255,255,.16)">Ски-альпинизм</a>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1200px;margin:0 auto;padding:0 28px">
+    <nav style="display:flex;align-items:center;gap:22px;min-height:64px;flex-wrap:nowrap">'''
 
-NAV_DIV_RE = re.compile(
-    r'(<div style="display:flex;align-items:center;gap:1px;margin-left:auto;flex-wrap:wrap">\s*)'
-    r'(<a class="dh0")',
+HEADER_OPEN_RE = re.compile(
+    r'<header style="position:fixed;top:0;left:0;right:0;z-index:60;background:rgba\(255,255,255,\.92\);backdrop-filter:blur\(12px\);border-bottom:1px solid #e9edf1">\s*'
+    r'<div style="max-width:1200px;margin:0 auto;padding:0 28px">\s*'
+    r'<nav style="display:flex;align-items:center;gap:22px;min-height:74px;flex-wrap:wrap">',
     re.S,
 )
 
@@ -64,11 +73,21 @@ def fix_asset_paths(html: str) -> str:
     return html
 
 
-def inject_track_nav(html: str, track_nav: str) -> str:
-    m = NAV_DIV_RE.search(html)
-    if not m:
-        raise SystemExit("Nav div not found — cannot inject track switcher")
-    return NAV_DIV_RE.sub(m.group(1) + track_nav + m.group(2), html, count=1)
+def inject_track_nav(html: str, topbar: str) -> str:
+    if not HEADER_OPEN_RE.search(html):
+        raise SystemExit("Header open not found — cannot inject top track bar")
+    html = HEADER_OPEN_RE.sub(topbar, html, count=1)
+    html = html.replace(
+        'style="display:flex;align-items:center;gap:1px;margin-left:auto;flex-wrap:wrap"',
+        'style="display:flex;align-items:center;gap:0;margin-left:auto;flex-wrap:nowrap"',
+        1,
+    )
+    html = html.replace(
+        "align-items:center;padding:74px 0 84px",
+        "align-items:center;padding:110px 0 84px",
+        1,
+    )
+    return html
 
 
 def make_alpine(html: str) -> str:
@@ -104,7 +123,7 @@ def make_alpine(html: str) -> str:
             '<span class="docbadge">PDF ↗</span></li>\n        ' + meth,
             1,
         )
-    html = inject_track_nav(html, TRACK_NAV_ALP)
+    html = inject_track_nav(html, TOPBAR_ALP)
     html = fix_asset_paths(html)
     return html
 
@@ -208,7 +227,7 @@ def make_ski(html: str) -> str:
         1,
     )
 
-    html = inject_track_nav(html, TRACK_NAV_SKI)
+    html = inject_track_nav(html, TOPBAR_SKI)
     html = fix_asset_paths(html)
     return html
 
