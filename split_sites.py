@@ -93,6 +93,8 @@ def inject_track_nav(html: str, topbar: str) -> str:
 MOBILE_FIXES = '''<style id="mobile-fixes">
 /* ==== Мобильная адаптация (поверх инлайновых стилей Claude Design) ==== */
 img{max-width:100%;height:auto}
+.nav-toggle{position:absolute!important;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;margin:0}
+.nav-burger{display:none}
 @media (max-width:820px){
   [style*="grid-template-columns:1.05fr .95fr"]{grid-template-columns:1fr!important;gap:28px!important}
   [style*="grid-template-columns:1.2fr 1fr 1fr"]{grid-template-columns:1fr!important;gap:22px!important}
@@ -107,19 +109,32 @@ img{max-width:100%;height:auto}
   div[style*="height:75px"]{display:none!important}
   [style*="max-width:1200px"]{padding-left:16px!important;padding-right:16px!important}
   section[style*="padding:88px 0"]{padding:46px 0!important}
-  header nav{gap:12px!important;min-height:56px!important}
-  header nav>div{overflow-x:auto!important;flex-wrap:nowrap!important;min-width:0!important;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  header nav>div::-webkit-scrollbar{display:none}
   [style*="grid-template-columns:1.05fr .95fr"]{padding-top:22px!important;padding-bottom:48px!important}
+  header nav{flex-wrap:wrap!important;gap:12px!important;min-height:56px!important;position:relative}
+  .nav-burger{display:inline-flex!important;flex-direction:column;justify-content:center;gap:5px;width:46px;height:40px;padding:8px 11px;margin-left:auto;cursor:pointer;border-radius:9px;border:1px solid #e6eaee;background:#fff}
+  .nav-burger span{display:block;height:2px;width:24px;background:#12161b;border-radius:2px;transition:transform .25s,opacity .2s}
+  #nav-toggle:checked ~ .nav-burger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  #nav-toggle:checked ~ .nav-burger span:nth-child(2){opacity:0}
+  #nav-toggle:checked ~ .nav-burger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  header nav>div{display:none!important;width:100%!important;order:3;flex-direction:column!important;align-items:stretch!important;gap:2px!important;margin:8px 0 6px!important;padding-top:10px!important;border-top:1px solid #eef1f4}
+  #nav-toggle:checked ~ div{display:flex!important}
+  header nav>div>a{padding:13px 12px!important;border-radius:10px!important;font-size:16px!important;margin-left:0!important}
+  header nav>div>a[style*="background:#1466a8"],header nav>div>a[style*="background:#0b2f4a"]{color:#fff!important;text-align:center;margin-top:6px!important}
 }
 </style>
+<script id="mobile-fixes-js">document.addEventListener("click",function(e){var a=e.target.closest("header nav > div a");if(a){var t=document.getElementById("nav-toggle");if(t)t.checked=false;}});</script>
 '''
 
 
 def inject_mobile(html: str) -> str:
-    """Добавляет адаптивный блок стилей перед </head> (идемпотентно)."""
-    if 'id="mobile-fixes"' in html:
-        html = re.sub(r'<style id="mobile-fixes">.*?</style>\n?', '', html, flags=re.S)
+    """Адаптив: бургер-меню + свёртка гридов. Идемпотентно."""
+    html = re.sub(r'<style id="mobile-fixes">.*?</style>\n?', '', html, flags=re.S)
+    html = re.sub(r'<script id="mobile-fixes-js">.*?</script>\n?', '', html, flags=re.S)
+    links_div = '<div style="display:flex;align-items:center;gap:0;margin-left:auto;flex-wrap:nowrap">'
+    burger = ('<input type="checkbox" id="nav-toggle" class="nav-toggle" aria-hidden="true">'
+              '<label class="nav-burger" for="nav-toggle" aria-label="Меню"><span></span><span></span><span></span></label>')
+    if 'id="nav-toggle"' not in html and links_div in html:
+        html = html.replace(links_div, burger + links_div, 1)
     return html.replace("</head>", MOBILE_FIXES + "</head>", 1)
 
 
