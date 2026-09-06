@@ -357,7 +357,6 @@ HUB = r"""<!DOCTYPE html>
       <a class="card alpine" href="alpinizm/">
         <img class="preview" src="preview-alpinizm.webp" alt="Практика на скальном рельефе" width="800" height="500">
         <div class="body">
-        <span class="tag">Подвид маршрутов</span>
         <h2>Альпинизм и горный туризм</h2>
         <p>Скальный, снежно-ледовый и комбинированный рельеф, шортропинг, спасательные работы, программы ДПО и профобучения.</p>
         <ul>
@@ -365,14 +364,13 @@ HUB = r"""<!DOCTYPE html>
           <li>Очный практикум в горах</li>
           <li>Методика аттестации по альпинизму / ГТ</li>
         </ul>
-        <span class="cta">Перейти на сайт →</span>
+        <span class="cta">Узнать подробнее</span>
         </div>
       </a>
 
       <a class="card ski" href="ski/">
         <img class="preview" src="preview-ski.webp" alt="Фрирайд на неподготовленном склоне" width="800" height="500">
         <div class="body">
-        <span class="tag">Неподготовленные склоны</span>
         <h2>Ски-альпинизм и фрирайд</h2>
         <p>Лавинная безопасность, тактика подъёма и спуска, сопровождение группы вне трасс, отдельный квалификационный экзамен.</p>
         <ul>
@@ -380,7 +378,7 @@ HUB = r"""<!DOCTYPE html>
           <li>Работа с бипером, щупом, лопатой</li>
           <li>Методика аттестации по ски / фрирайду</li>
         </ul>
-        <span class="cta">Перейти на сайт →</span>
+        <span class="cta">Узнать подробнее</span>
         </div>
       </a>
     </div>
