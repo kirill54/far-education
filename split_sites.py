@@ -296,22 +296,22 @@ HUB = r"""<!DOCTYPE html>
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;color:#12161b;font-family:'Formular','Helvetica Neue',Arial,'Segoe UI',sans-serif;
     background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(14,92,138,.18), transparent 55%),
-      radial-gradient(900px 500px at 90% 0%, rgba(233,113,50,.14), transparent 50%),
-      linear-gradient(180deg, #0b2f4a 0%, #0e5c8a 42%, #f5f7f9 42%, #f5f7f9 100%);
+      radial-gradient(1200px 600px at 10% -10%, rgba(14,92,138,.10), transparent 55%),
+      radial-gradient(900px 500px at 90% 0%, rgba(233,113,50,.08), transparent 50%),
+      linear-gradient(180deg, #f7f8fa 0%, #f5f7f9 100%);
     -webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
-  .wrap{max-width:1100px;margin:0 auto;padding:28px 24px 64px}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 24px 8px}
   header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:48px}
-  .brand{display:flex;align-items:center;gap:14px;color:#fff}
-  .brand img{height:48px;width:auto;display:block}
-  .brand span{font-size:14px;opacity:.85;max-width:28ch;line-height:1.35;color:#fff}
-  .top-link{color:#fff;font-weight:600;font-size:14.5px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.35)}
-  .top-link:hover{background:rgba(255,255,255,.12)}
-  .hero{color:#fff;margin-bottom:36px;max-width:34em}
-  .hero .eyebrow{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.8;margin:0 0 12px}
+  .brand{display:flex;align-items:center;gap:14px;color:#12161b}
+  .brand img{height:43px;width:auto;display:block}
+  .brand span{font-size:14px;opacity:.85;max-width:28ch;line-height:1.35;color:#3b4650}
+  .top-link{color:#0b2f4a;font-weight:600;font-size:14.5px;padding:10px 16px;border-radius:10px;border:1px solid #c5d0da}
+  .top-link:hover{background:#e9f1f8}
+  .hero{color:#12161b;margin-bottom:36px;max-width:34em}
+  .hero .eyebrow{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#0e5c8a;margin:0 0 12px}
   .hero h1{font-size:clamp(32px,5vw,48px);line-height:1.08;letter-spacing:-.03em;margin:0 0 16px;font-weight:700}
-  .hero p{font-size:18px;line-height:1.55;margin:0;opacity:.92}
+  .hero p{font-size:18px;line-height:1.55;margin:0;color:#4a5560}
   .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
   @media(max-width:820px){.grid{grid-template-columns:1fr}}
   .card{background:#fff;border-radius:18px;padding:0 0 24px;border:1px solid #e9edf1;
@@ -335,15 +335,17 @@ HUB = r"""<!DOCTYPE html>
   .card.alpine .cta{background:#1466a8;color:#fff}
   .card.ski .cta{background:#0b2f4a;color:#fff}
   .card .cta:hover{filter:brightness(1.06)}
-  footer{margin-top:40px;color:#626c78;font-size:14px;display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
-  footer a{color:#1466a8;font-weight:600}
+  footer{margin-top:48px;padding:28px 24px 36px;background:linear-gradient(180deg,#0e5c8a 0%,#0b2f4a 100%);
+    color:rgba(255,255,255,.82);font-size:14px}
+  footer .inner{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
+  footer a{color:#fff;font-weight:600}
 </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <a class="brand" href="./">
-        <img src="logo-far.svg" alt="Федерация альпинизма России" width="210" height="56">
+        <img src="logo-far.png" alt="Федерация альпинизма России" width="140" height="43">
       </a>
       <a class="top-link" href="alpinizm/#svedeniya">Сведения об организации</a>
     </header>
@@ -380,11 +382,13 @@ HUB = r"""<!DOCTYPE html>
       </a>
     </div>
 
-    <footer>
+  </div>
+  <footer>
+    <div class="inner">
       <span>© 2024–2026 Федерация альпинизма России</span>
       <span><a href="mailto:dpo@alpfederation.ru">dpo@alpfederation.ru</a> · <a href="alpinizm/#dokumenty">Документы</a></span>
-    </footer>
-  </div>
+    </div>
+  </footer>
 </body>
 </html>
 """
