@@ -90,6 +90,39 @@ def inject_track_nav(html: str, topbar: str) -> str:
     return html
 
 
+MOBILE_FIXES = '''<style id="mobile-fixes">
+/* ==== Мобильная адаптация (поверх инлайновых стилей Claude Design) ==== */
+img{max-width:100%;height:auto}
+@media (max-width:820px){
+  [style*="grid-template-columns:1.05fr .95fr"]{grid-template-columns:1fr!important;gap:28px!important}
+  [style*="grid-template-columns:1.2fr 1fr 1fr"]{grid-template-columns:1fr!important;gap:22px!important}
+}
+@media (max-width:640px){
+  html,body{overflow-x:hidden}
+  [style*="text-transform:uppercase"]{white-space:normal!important;flex-wrap:wrap!important}
+  [style*="display:inline-flex"]{max-width:100%!important}
+  [style*="display:grid"]>*{min-width:0!important}
+  [style*="minmax(340px"],[style*="minmax(330px"],[style*="minmax(300px"]{grid-template-columns:1fr!important}
+  header[style*="position:fixed"]{position:static!important;backdrop-filter:none!important}
+  div[style*="height:75px"]{display:none!important}
+  [style*="max-width:1200px"]{padding-left:16px!important;padding-right:16px!important}
+  section[style*="padding:88px 0"]{padding:46px 0!important}
+  header nav{gap:12px!important;min-height:56px!important}
+  header nav>div{overflow-x:auto!important;flex-wrap:nowrap!important;min-width:0!important;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  header nav>div::-webkit-scrollbar{display:none}
+  [style*="grid-template-columns:1.05fr .95fr"]{padding-top:22px!important;padding-bottom:48px!important}
+}
+</style>
+'''
+
+
+def inject_mobile(html: str) -> str:
+    """Добавляет адаптивный блок стилей перед </head> (идемпотентно)."""
+    if 'id="mobile-fixes"' in html:
+        html = re.sub(r'<style id="mobile-fixes">.*?</style>\n?', '', html, flags=re.S)
+    return html.replace("</head>", MOBILE_FIXES + "</head>", 1)
+
+
 def make_alpine(html: str) -> str:
     html = html.replace(
         "<title>Обучение инструкторов-проводников · Федерация альпинизма России</title>",
@@ -125,6 +158,7 @@ def make_alpine(html: str) -> str:
         )
     html = inject_track_nav(html, TOPBAR_ALP)
     html = fix_asset_paths(html)
+    html = inject_mobile(html)
     return html
 
 
@@ -228,6 +262,7 @@ def make_ski(html: str) -> str:
 
     html = inject_track_nav(html, TOPBAR_SKI)
     html = fix_asset_paths(html)
+    html = inject_mobile(html)
     return html
 
 
