@@ -304,7 +304,7 @@ HUB = r"""<!DOCTYPE html>
   .wrap{max-width:1100px;margin:0 auto;padding:28px 24px 64px}
   header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:48px}
   .brand{display:flex;align-items:center;gap:14px;color:#fff}
-  .brand img{height:38px;width:auto;display:block}
+  .brand img{height:48px;width:auto;display:block}
   .brand span{font-size:14px;opacity:.85;max-width:28ch;line-height:1.35;color:#fff}
   .top-link{color:#fff;font-weight:600;font-size:14.5px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.35)}
   .top-link:hover{background:rgba(255,255,255,.12)}
@@ -318,13 +318,14 @@ HUB = r"""<!DOCTYPE html>
     box-shadow:0 18px 40px rgba(11,47,74,.08);display:flex;flex-direction:column;min-height:280px;
     overflow:hidden;transition:transform .2s ease, box-shadow .2s ease}
   .card:hover{transform:translateY(-3px);box-shadow:0 22px 48px rgba(11,47,74,.12)}
-  .card .preview{display:block;width:100%;height:168px;object-fit:cover;background:#d8dee6}
+  .card .preview{display:block;width:100%;height:280px;object-fit:cover;object-position:center 35%;background:#d8dee6}
+  @media(max-width:820px){.card .preview{height:220px}}
   .card .body{padding:22px 26px 0;display:flex;flex-direction:column;flex:1}
   .card .tag{display:inline-flex;align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:.03em;
     padding:5px 10px;border-radius:999px;margin-bottom:14px}
   .card.alpine .tag{background:#e9f1f8;color:#0e5c8a}
   .card.ski .tag{background:#0b2f4a;color:#fff}
-  .card h2{font-size:26px;letter-spacing:-.02em;margin:0 0 12px;line-height:1.2}
+  .card h2{font-size:26px;letter-spacing:-.02em;margin:0 0 16px;line-height:1.2}
   .card p{color:#4a5560;font-size:16px;line-height:1.55;margin:0 0 18px;flex:1}
   .card ul{margin:0 0 22px;padding:0;list-style:none;color:#3b4650;font-size:14.5px}
   .card li{display:flex;gap:8px;margin-bottom:6px}
@@ -342,7 +343,7 @@ HUB = r"""<!DOCTYPE html>
   <div class="wrap">
     <header>
       <a class="brand" href="./">
-        <img src="logo-far.png" alt="Федерация альпинизма России" width="132" height="41">
+        <img src="logo-far.svg" alt="Федерация альпинизма России" width="210" height="56">
       </a>
       <a class="top-link" href="alpinizm/#svedeniya">Сведения об организации</a>
     </header>
@@ -350,33 +351,29 @@ HUB = r"""<!DOCTYPE html>
     <div class="hero">
       <p class="eyebrow">Обучение и аттестация инструкторов-проводников</p>
       <h1>Выберите направление</h1>
-      <p>Два самостоятельных трека обучения и аттестации. Экзамен по ски-альпинизму и фрирайду проходит отдельно от альпинизма и горного туризма.</p>
+      <p>Два самостоятельных трека обучения и аттестации.</p>
     </div>
 
     <div class="grid">
       <a class="card alpine" href="alpinizm/">
-        <img class="preview" src="preview-alpinizm.webp" alt="Практика на скальном рельефе" width="800" height="500">
+        <img class="preview" src="preview-alpinizm.webp" alt="Практика на скальном рельефе" width="1080" height="720">
         <div class="body">
         <h2>Альпинизм и горный туризм</h2>
-        <p>Скальный, снежно-ледовый и комбинированный рельеф, шортропинг, спасательные работы, программы ДПО и профобучения.</p>
         <ul>
-          <li>Программы 256 ч и повышение квалификации</li>
-          <li>Очный практикум в горах</li>
-          <li>Методика аттестации по альпинизму / ГТ</li>
+          <li>Методика аттестации и требования к кандидатам</li>
+          <li>Дополнительное обучение: профпереподготовка и повышение квалификации</li>
         </ul>
         <span class="cta">Узнать подробнее</span>
         </div>
       </a>
 
       <a class="card ski" href="ski/">
-        <img class="preview" src="preview-ski.webp" alt="Фрирайд на неподготовленном склоне" width="800" height="500">
+        <img class="preview" src="preview-ski.webp" alt="Фрирайд на неподготовленном склоне" width="1080" height="720">
         <div class="body">
         <h2>Ски-альпинизм и фрирайд</h2>
-        <p>Лавинная безопасность, тактика подъёма и спуска, сопровождение группы вне трасс, отдельный квалификационный экзамен.</p>
         <ul>
-          <li>Отдельные билеты теории и практики</li>
-          <li>Работа с бипером, щупом, лопатой</li>
-          <li>Методика аттестации по ски / фрирайду</li>
+          <li>Методика аттестации и требования к кандидатам</li>
+          <li>Дополнительное обучение по ски-альпинизму и фрирайду</li>
         </ul>
         <span class="cta">Узнать подробнее</span>
         </div>

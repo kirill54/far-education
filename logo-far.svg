@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" role="img" aria-label="Федерация альпинизма России">
+  <!-- знак: три параллелограмма-вершины, как в исходном логотипе ФАР -->
+  <g transform="translate(6,10)" stroke="#0b2f4a" stroke-width="1.2" stroke-linejoin="round">
+    <polygon fill="#ffffff" points="4,58 38,4 50,4 16,58"/>
+    <polygon fill="#1e4f8c" points="20,58 44,16 56,16 32,58"/>
+    <polygon fill="#c62828" points="34,58 54,28 66,28 46,58"/>
+  </g>
+  <text x="88" y="28" fill="#ffffff" font-family="Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600">Федерация</text>
+  <text x="88" y="48" fill="#ffffff" font-family="Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600">альпинизма</text>
+  <text x="88" y="68" fill="#ffffff" font-family="Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600">России</text>
+</svg>
