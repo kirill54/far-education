@@ -304,8 +304,8 @@ HUB = r"""<!DOCTYPE html>
   .wrap{max-width:1100px;margin:0 auto;padding:28px 24px 64px}
   header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:48px}
   .brand{display:flex;align-items:center;gap:14px;color:#fff}
-  .brand img{height:38px;width:auto;display:block;filter:brightness(0) invert(1)}
-  .brand span{font-size:14px;opacity:.85;max-width:28ch;line-height:1.35}
+  .brand img{height:38px;width:auto;display:block}
+  .brand span{font-size:14px;opacity:.85;max-width:28ch;line-height:1.35;color:#fff}
   .top-link{color:#fff;font-weight:600;font-size:14.5px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.35)}
   .top-link:hover{background:rgba(255,255,255,.12)}
   .hero{color:#fff;margin-bottom:36px;max-width:34em}
@@ -314,10 +314,12 @@ HUB = r"""<!DOCTYPE html>
   .hero p{font-size:18px;line-height:1.55;margin:0;opacity:.92}
   .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
   @media(max-width:820px){.grid{grid-template-columns:1fr}}
-  .card{background:#fff;border-radius:18px;padding:28px 26px 24px;border:1px solid #e9edf1;
+  .card{background:#fff;border-radius:18px;padding:0 0 24px;border:1px solid #e9edf1;
     box-shadow:0 18px 40px rgba(11,47,74,.08);display:flex;flex-direction:column;min-height:280px;
-    transition:transform .2s ease, box-shadow .2s ease}
+    overflow:hidden;transition:transform .2s ease, box-shadow .2s ease}
   .card:hover{transform:translateY(-3px);box-shadow:0 22px 48px rgba(11,47,74,.12)}
+  .card .preview{display:block;width:100%;height:168px;object-fit:cover;background:#d8dee6}
+  .card .body{padding:22px 26px 0;display:flex;flex-direction:column;flex:1}
   .card .tag{display:inline-flex;align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:.03em;
     padding:5px 10px;border-radius:999px;margin-bottom:14px}
   .card.alpine .tag{background:#e9f1f8;color:#0e5c8a}
@@ -340,7 +342,7 @@ HUB = r"""<!DOCTYPE html>
   <div class="wrap">
     <header>
       <a class="brand" href="./">
-        <img src="LOGO_SRC" alt="Федерация альпинизма России" width="132" height="41">
+        <img src="logo-far.png" alt="Федерация альпинизма России" width="132" height="41">
         <span>Обучение и аттестация инструкторов-проводников</span>
       </a>
       <a class="top-link" href="alpinizm/#svedeniya">Сведения об организации</a>
@@ -354,6 +356,8 @@ HUB = r"""<!DOCTYPE html>
 
     <div class="grid">
       <a class="card alpine" href="alpinizm/">
+        <img class="preview" src="preview-alpinizm.webp" alt="Практика на скальном рельефе" width="800" height="500">
+        <div class="body">
         <span class="tag">Подвид маршрутов</span>
         <h2>Альпинизм и горный туризм</h2>
         <p>Скальный, снежно-ледовый и комбинированный рельеф, шортропинг, спасательные работы, программы ДПО и профобучения.</p>
@@ -363,9 +367,12 @@ HUB = r"""<!DOCTYPE html>
           <li>Методика аттестации по альпинизму / ГТ</li>
         </ul>
         <span class="cta">Перейти на сайт →</span>
+        </div>
       </a>
 
       <a class="card ski" href="ski/">
+        <img class="preview" src="preview-ski.webp" alt="Фрирайд на неподготовленном склоне" width="800" height="500">
+        <div class="body">
         <span class="tag">Неподготовленные склоны</span>
         <h2>Ски-альпинизм и фрирайд</h2>
         <p>Лавинная безопасность, тактика подъёма и спуска, сопровождение группы вне трасс, отдельный квалификационный экзамен.</p>
@@ -375,6 +382,7 @@ HUB = r"""<!DOCTYPE html>
           <li>Методика аттестации по ски / фрирайду</li>
         </ul>
         <span class="cta">Перейти на сайт →</span>
+        </div>
       </a>
     </div>
 
@@ -427,9 +435,7 @@ def main() -> None:
     print("wrote alpinizm/index.html", len(alpine))
     print("wrote ski/index.html", len(ski))
 
-    logo = extract_logo_src(original)
-    hub = HUB.replace("LOGO_SRC", logo)
-    SRC.write_text(hub, encoding="utf-8")
+    SRC.write_text(HUB, encoding="utf-8")
     print("wrote hub index.html", len(hub))
 
     copy_methodologies()
