@@ -5,49 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Аттестация инструкторов-проводников · ФАР</title>
 <link rel="icon" type="image/x-icon" href="../favicon.ico">
-<meta name="description" content="Порядок аттестации инструкторов-проводников ФАР в соответствии с постановлением Правительства РФ № 1003: допуск, теоретический и практический этапы, уполномоченные базы, федеральный реестр.">
+<meta name="description" content="Порядок и расписание аттестации инструкторов-проводников ФАР в соответствии с постановлением Правительства РФ № 1003.">
 <style>
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;color:#12161b;font-family:'Helvetica Neue',Arial,'Segoe UI',sans-serif;
-    background:#f5f7f9;-webkit-font-smoothing:antialiased}
+  body{margin:0;color:#12161b;font-family:'Helvetica Neue',Arial,'Segoe UI',sans-serif;background:#f4f6f8;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
-  header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid #e9edf1}
-  .bar{max-width:1100px;margin:0 auto;padding:0 24px;min-height:64px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid #e6ebf0}
+  .bar{max-width:1120px;margin:0 auto;padding:0 24px;min-height:64px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
   .brand img{height:38px;width:auto;display:block}
   .site-nav{display:flex;gap:6px;margin-left:auto}
   .site-nav a{padding:8px 14px;border-radius:9px;font-weight:600;font-size:15px;color:#3b4650}
   .site-nav a.on{background:#0b2f4a;color:#fff}
   .site-nav a:hover:not(.on){background:#e9f1f8}
-  .wrap{max-width:1100px;margin:0 auto;padding:40px 24px 8px}
-  .eyebrow{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#0e5c8a;margin:0 0 12px}
-  h1{font-size:clamp(32px,5vw,46px);line-height:1.08;letter-spacing:-.03em;margin:0 0 14px}
-  .lead{font-size:18px;line-height:1.6;color:#4a5560;margin:0 0 36px;max-width:42em}
-  h2{font-size:26px;letter-spacing:-.02em;margin:0 0 8px}
-  .sec{margin:0 0 48px}
-  .sec > p{color:#4a5560;line-height:1.6;font-size:16.5px;margin:0 0 18px;max-width:46em}
+  .hero{position:relative;min-height:420px;display:flex;align-items:flex-end;color:#fff;overflow:hidden}
+  .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 28%}
+  .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,47,74,.25) 0%,rgba(11,47,74,.78) 72%)}
+  .hero .inner{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:48px 24px 44px;width:100%}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85;margin:0 0 12px}
+  h1{font-size:clamp(30px,5vw,48px);line-height:1.08;letter-spacing:-.03em;margin:0 0 14px;max-width:16ch}
+  .lead{font-size:17.5px;line-height:1.55;max-width:46em;margin:0;opacity:.94}
+  .wrap{max-width:1120px;margin:0 auto;padding:48px 24px 8px}
+  h2{font-size:26px;letter-spacing:-.02em;margin:0 0 10px}
+  .sec{margin:0 0 52px}
+  .sec > p{color:#4a5560;line-height:1.6;font-size:16.5px;margin:0 0 20px;max-width:48em}
   .steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-  .card{background:#fff;border:1px solid #e9edf1;border-radius:16px;padding:22px 20px;box-shadow:0 10px 24px rgba(11,47,74,.05)}
+  .card{background:#fff;border:1px solid #e6ebf0;border-radius:16px;padding:22px 20px;box-shadow:0 12px 28px rgba(11,47,74,.05)}
   .card .n{display:inline-flex;width:28px;height:28px;border-radius:8px;background:#e9f1f8;color:#0e5c8a;font-weight:700;align-items:center;justify-content:center;font-size:14px;margin-bottom:10px}
   .card h3{margin:0 0 8px;font-size:18px}
-  .card p,.card li{margin:0;color:#4a5560;line-height:1.55;font-size:15.5px}
-  .card ul{margin:8px 0 0;padding-left:1.1em;color:#4a5560}
-  .bases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .card p{margin:0;color:#4a5560;line-height:1.55;font-size:15.5px}
+  .registry{display:flex;gap:22px;align-items:center;background:#0b2f4a;color:#fff;border-radius:18px;padding:26px 24px;overflow:hidden}
+  .registry p{margin:0 0 14px;opacity:.9;max-width:46em}
+  .bases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .base{padding:0;overflow:hidden}
+  .base img{display:block;width:100%;height:168px;object-fit:cover}
+  .base .txt{padding:16px 18px 20px}
   .base a{color:#1466a8;font-weight:600}
-  .train{background:#fff;border:1px solid #d5e3ef;border-radius:18px;padding:26px 24px;box-shadow:0 10px 24px rgba(11,47,74,.05)}
-  .train h2{margin-bottom:10px}
+  .sched{overflow:auto;border-radius:16px;border:1px solid #e6ebf0;background:#fff;box-shadow:0 12px 28px rgba(11,47,74,.05)}
+  table{width:100%;border-collapse:collapse;font-size:15px;min-width:640px}
+  th{text-align:left;padding:14px 16px;background:#12161b;color:#fff;font-weight:600}
+  td{padding:13px 16px;border-bottom:1px solid #eef1f4;color:#3b4650}
+  tr:last-child td{border-bottom:0}
+  .tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#e9f1f8;color:#0e5c8a;font-size:12px;font-weight:700}
+  .train{display:grid;grid-template-columns:1.1fr .9fr;gap:0;background:#fff;border:1px solid #e6ebf0;border-radius:18px;overflow:hidden;box-shadow:0 12px 28px rgba(11,47,74,.05)}
+  .train .txt{padding:28px 26px}
+  .train img{width:100%;height:100%;object-fit:cover;min-height:220px}
   .docs a{color:#1466a8;font-weight:600}
   .docs li{margin:0 0 10px;line-height:1.45}
-  .cta-band{background:#0b2f4a;color:#fff;border-radius:18px;padding:28px 26px}
+  .cta-band{background:linear-gradient(135deg,#0e5c8a,#0b2f4a);color:#fff;border-radius:18px;padding:30px 26px}
   .cta-band p{opacity:.9;margin:8px 0 18px;max-width:40em}
-  .btn{display:inline-flex;padding:12px 18px;border-radius:11px;background:#1466a8;color:#fff;font-weight:600}
-  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.35);margin-left:8px}
+  .btn{display:inline-flex;align-items:center;padding:12px 18px;border-radius:11px;background:#1466a8;color:#fff;font-weight:600}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.4);margin-left:8px}
   .btn.light{background:#1466a8;color:#fff}
-  footer{margin-top:48px;padding:28px 24px 36px;background:linear-gradient(180deg,#0e5c8a,#0b2f4a);color:rgba(255,255,255,.82);font-size:14px}
-  footer .inner{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
+  footer{margin-top:56px;padding:28px 24px 36px;background:#0b2f4a;color:rgba(255,255,255,.82);font-size:14px}
+  footer .inner{max-width:1120px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
   footer a{color:#fff;font-weight:600}
   @media(max-width:820px){
-    .steps,.bases{grid-template-columns:1fr}
+    .steps,.bases,.train{grid-template-columns:1fr}
+    .hero{min-height:360px}
     .site-nav{width:100%;margin-left:0}
+    .registry{flex-direction:column;align-items:flex-start}
   }
 </style>
 </head>
@@ -62,14 +78,73 @@
   </div>
 </header>
 
+<section class="hero">
+  <img src="../preview-alpinizm.webp" alt="Практический этап аттестации на горном рельефе">
+  <div class="inner">
+    <p class="eyebrow">Федерация альпинизма России</p>
+    <h1>Аттестация инструкторов-проводников</h1>
+    <p class="lead">Квалификационный экзамен проводится в соответствии с постановлением Правительства Российской Федерации от 1 июня 2021&nbsp;г. №&nbsp;1003. Лица, успешно прошедшие аттестацию, получают квалификацию инструктора-проводника и вносятся в федеральный реестр.</p>
+  </div>
+</section>
+
 <div class="wrap">
-  <p class="eyebrow">Федерация альпинизма России</p>
-  <h1>Аттестация инструкторов-проводников</h1>
-  <p class="lead">Квалификационный экзамен проводится Федерацией альпинизма России в соответствии с постановлением Правительства Российской Федерации от 1 июня 2021&nbsp;г. №&nbsp;1003. Лица, успешно прошедшие аттестацию, получают квалификацию инструктора-проводника и вносятся в федеральный реестр. Аттестация осуществляется по подвидам «альпинизм и горный туризм» и «ски-альпинизм и фрирайд»; экзаменационные материалы по подвидам различны, порядок проведения — единый.</p>
+  <section class="sec" id="reestr">
+    <div class="registry">
+      <div>
+        <h2 style="color:#fff;margin-bottom:8px">Федеральный реестр инструкторов-проводников</h2>
+        <p>Сведения об аттестованных инструкторах-проводниках размещаются в государственном реестре Министерства экономического развития Российской Федерации. Осуществление деятельности без внесения в реестр не допускается.</p>
+        <a class="btn ghost" href="https://economy.gov.ru/material/directions/turizm/reestry_turizm/provodnik/" target="_blank" rel="noopener">Открыть реестр ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="raspisanie">
+    <h2>Расписание квалификационных экзаменов</h2>
+    <p>Теоретический этап проводится в заочно-дистанционном формате. Практический этап — очно на уполномоченных базах. Даты практической части согласуются при регистрации заявления. Квалификационные экзамены по подвиду «ски-альпинизм и фрирайд» проводятся отдельно.</p>
+    <div class="sched">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Этап</th>
+            <th>Подвид</th>
+            <th>Формат</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>12 августа 2026</td>
+            <td>Теоретический этап</td>
+            <td>Альпинизм и горный туризм</td>
+            <td><span class="tag">Заочно</span></td>
+          </tr>
+          <tr>
+            <td>26 августа 2026</td>
+            <td>Теоретический этап</td>
+            <td>Альпинизм и горный туризм</td>
+            <td><span class="tag">Заочно</span></td>
+          </tr>
+          <tr>
+            <td>9 сентября 2026</td>
+            <td>Теоретический этап</td>
+            <td>Альпинизм и горный туризм</td>
+            <td><span class="tag">Заочно</span></td>
+          </tr>
+          <tr>
+            <td>23 сентября 2026</td>
+            <td>Теоретический этап</td>
+            <td>Альпинизм и горный туризм</td>
+            <td><span class="tag">Заочно</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-size:15px">Инструкторы, внесённые в государственный реестр по спискам туроператоров, обязаны пройти аттестацию <b>до 1 октября 2026&nbsp;г.</b></p>
+  </section>
 
   <section class="sec" id="kto">
     <h2>Кто допускается к аттестации</h2>
-    <p>К аттестации допускаются лица, соответствующие требованиям к опыту, состоянию здоровья и уровню образования, в том числе выпускники программ профессионального обучения и дополнительного профессионального образования ФАР, а также претенденты с подтверждённым самостоятельным опытом — при положительном решении аттестационной комиссии.</p>
+    <p>К аттестации допускаются лица, соответствующие требованиям к опыту, состоянию здоровья и уровню образования, в том числе выпускники программ ФАР, а также претенденты с подтверждённым самостоятельным опытом — при положительном решении аттестационной комиссии.</p>
     <div class="steps">
       <div class="card">
         <h3>По итогам обучения в ФАР</h3>
@@ -84,67 +159,86 @@
 
   <section class="sec" id="poryadok">
     <h2>Порядок проведения аттестации</h2>
-    <p>Аттестация включает подачу заявления, проверку комплекта документов, теоретический и практический этапы, принятие решения комиссией и внесение сведений в федеральный реестр. Продолжительность очной части определяется графиком соответствующей сессии.</p>
+    <p>Аттестация включает подачу заявления, проверку комплекта документов, теоретический и практический этапы, принятие решения комиссией и внесение сведений в федеральный реестр.</p>
     <div class="steps">
       <div class="card">
         <span class="n">1</span>
         <h3>Подача заявления</h3>
-        <p>Заявление направляется на адрес электронной почты с указанием фамилии, имени, отчества, избранного подвида (альпинизм и горный туризм либо ски-альпинизм и фрирайд) и сведений об опыте. Перечень недостающих документов сообщается в ответе.</p>
+        <p>Заявление направляется с указанием фамилии, имени, отчества, избранного подвида и сведений об опыте. Перечень недостающих документов сообщается в ответе.</p>
       </div>
       <div class="card">
         <span class="n">2</span>
         <h3>Допуск к экзамену</h3>
-        <p>Аттестационная комиссия рассматривает документы о горном опыте, состоянии здоровья и образовании. При соответствии установленным требованиям претендент включается в состав группы на экзамен.</p>
+        <p>Аттестационная комиссия рассматривает документы о горном опыте, состоянии здоровья и образовании. При соответствии требованиям претендент включается в состав группы на экзамен.</p>
       </div>
       <div class="card">
         <span class="n">3</span>
         <h3>Теоретический этап</h3>
-        <p>Экзамен проводится в форме теста: 25 вопросов по избранному подвиду, продолжительность — 60 минут. Зачётное число правильных ответов — не менее 20. Для подготовки доступен учебный тренажёр в том же формате; его результат не засчитывается как экзамен.</p>
+        <p>Проводится в заочно-дистанционном формате: 25 вопросов по избранному подвиду, продолжительность — 60 минут. Зачётное число правильных ответов — не менее 20.</p>
       </div>
       <div class="card">
         <span class="n">4</span>
         <h3>Практический этап</h3>
-        <p>Проводится на реальном горном рельефе и включает проверку личной техники, сопровождения группы, обеспечения безопасности и проведения спасательных работ. По подвиду «ски-альпинизм и фрирайд» дополнительно оцениваются лавинная безопасность и действия на неподготовленных склонах. Содержание заданий определяется методикой аттестации.</p>
+        <p>Проводится очно на реальном рельефе: личная техника, сопровождение группы, обеспечение безопасности и спасательные работы. По подвиду «ски-альпинизм и фрирайд» дополнительно оцениваются лавинная безопасность и действия на неподготовленных склонах.</p>
       </div>
       <div class="card">
         <span class="n">5</span>
         <h3>Решение комиссии</h3>
-        <p>При успешном прохождении обоих этапов присваивается квалификация инструктора-проводника, сведения вносятся в федеральный реестр. Осуществление деятельности инструктора-проводника без внесения в реестр не допускается.</p>
+        <p>При успешном прохождении обоих этапов присваивается квалификация инструктора-проводника, сведения вносятся в федеральный реестр.</p>
       </div>
       <div class="card">
         <span class="n">6</span>
         <h3>Повторная аттестация</h3>
-        <p>Лица, не сдавшие теоретический или практический этап, допускаются к повторной сдаче в порядке, установленном аттестационной комиссией. Сроки повторной явки сообщаются при регистрации заявления.</p>
+        <p>Лица, не сдавшие теоретический или практический этап, допускаются к повторной сдаче в порядке, установленном аттестационной комиссией.</p>
       </div>
     </div>
   </section>
 
   <section class="sec" id="bazy">
-    <h2>Места проведения аттестации</h2>
-    <p>Практический этап проводится на уполномоченных аттестационных базах Федерации альпинизма России. Конкретная база и сроки сессии определяются избранным подвидом и графиком набора и доводятся до претендента при регистрации заявления.</p>
+    <h2>Места проведения практического этапа</h2>
+    <p>Практический этап проводится на уполномоченных аттестационных базах Федерации альпинизма России. Конкретная база и сроки сессии определяются избранным подвидом и графиком набора.</p>
     <div class="bases">
-      <div class="card base">
-        <h3>Альплагерь «Адыл-Су»</h3>
-        <p>Кавказ. Уполномоченная база; скальный и ледово-снежный рельеф.</p>
-        <p style="margin-top:10px"><a href="https://ualclub.ru/alplager_adyl_su" target="_blank" rel="noopener">Официальный сайт ↗</a></p>
-      </div>
-      <div class="card base">
-        <h3>Альплагерь «Актру»</h3>
-        <p>Республика Алтай. Уполномоченная высокогорная база проведения практики и экзамена.</p>
-        <p style="margin-top:10px"><a href="https://aktrucamp.ru" target="_blank" rel="noopener">aktrucamp.ru ↗</a></p>
-      </div>
-      <div class="card base">
-        <h3>Камчатка</h3>
-        <p>Дальний Восток. Сроки отдельных сессий устанавливаются по графику набора.</p>
-      </div>
+      <article class="card base">
+        <img src="../preview-base-adylsu.webp" alt="Альплагерь Адыл-Су">
+        <div class="txt">
+          <h3>Альплагерь «Адыл-Су»</h3>
+          <p>Регион Кавказ. Скальный и ледово-снежный рельеф.</p>
+          <p style="margin-top:10px"><a href="https://ualclub.ru/alplager_adyl_su" target="_blank" rel="noopener">Официальный сайт ↗</a></p>
+        </div>
+      </article>
+      <article class="card base">
+        <img src="../preview-base-aktru.webp" alt="Альплагерь Актру">
+        <div class="txt">
+          <h3>Альплагерь «Актру»</h3>
+          <p>Регион Сибирь, Республика Алтай. Высокогорная база.</p>
+          <p style="margin-top:10px"><a href="https://aktrucamp.ru" target="_blank" rel="noopener">aktrucamp.ru ↗</a></p>
+        </div>
+      </article>
+      <article class="card base">
+        <img src="../preview-base-kamchatka.webp" alt="Камчатка">
+        <div class="txt">
+          <h3>Камчатка</h3>
+          <p>Регион Дальний Восток. Сроки отдельных сессий — по графику набора.</p>
+        </div>
+      </article>
+      <article class="card base">
+        <img src="../preview-ski.webp" alt="Ски-альпинизм и ЮБК" style="object-position:center 40%">
+        <div class="txt">
+          <h3>Крым и ски-альпинизм</h3>
+          <p>Севастопольский сектор ЮБК — практический этап по альпинизму и горному туризму. Экзамен по ски-альпинизму и фрирайду проводится отдельно.</p>
+        </div>
+      </article>
     </div>
   </section>
 
   <section class="sec" id="obuchenie">
     <div class="train">
-      <h2>Профессиональное обучение</h2>
-      <p style="color:#4a5560;line-height:1.6;margin:0 0 16px;max-width:42em">Аттестация является квалификационным экзаменом и не заменяет освоение образовательной программы. При отсутствии подтверждённого опыта либо при отказе в допуске претендент может пройти программу профессиональной переподготовки ФАР (дистанционный и очный модули на уполномоченных базах). По завершении обучения выпускник направляется на аттестацию.</p>
-      <a class="btn light" href="../obuchenie/">Программы обучения</a>
+      <div class="txt">
+        <h2>Профессиональное обучение</h2>
+        <p style="color:#4a5560;line-height:1.6;margin:0 0 18px">Аттестация является квалификационным экзаменом и не заменяет освоение образовательной программы. При отсутствии подтверждённого опыта либо при отказе в допуске претендент может пройти программу профессиональной переподготовки ФАР. По завершении обучения выпускник направляется на аттестацию.</p>
+        <a class="btn light" href="../obuchenie/">Программы обучения</a>
+      </div>
+      <img src="../preview-ski.webp" alt="Очный модуль подготовки">
     </div>
   </section>
 
@@ -155,7 +249,7 @@
       <li><a href="../Методика_аттестации_альпинизм_горный_туризм.docx">Методика аттестации по подвиду «альпинизм и горный туризм»</a></li>
       <li><a href="../Методика_аттестации_ски_альпинизм_фрирайд.docx">Методика аттестации по подвиду «ски-альпинизм и фрирайд»</a></li>
       <li><a href="https://www.consultant.ru/document/cons_doc_LAW_405221/" target="_blank" rel="noopener">Постановление Правительства Российской Федерации от 01.06.2021 №&nbsp;1003</a></li>
-      <li><a href="../trenazher/">Учебный тренажёр теоретического этапа (25 вопросов, 60 минут)</a></li>
+      <li><a href="https://economy.gov.ru/material/directions/turizm/reestry_turizm/provodnik/" target="_blank" rel="noopener">Федеральный реестр инструкторов-проводников</a></li>
     </ul>
   </section>
 
@@ -163,7 +257,6 @@
     <h2 style="color:#fff">Подача заявления</h2>
     <p>Для регистрации на аттестационную сессию направьте заявление с указанием избранного подвида. В ответе сообщаются перечень документов, база проведения и срок сессии.</p>
     <a class="btn" href="mailto:dpo@alpfederation.ru">dpo@alpfederation.ru</a>
-    <a class="btn ghost" href="../trenazher/">Тренажёр теории</a>
   </div>
 </div>
 
