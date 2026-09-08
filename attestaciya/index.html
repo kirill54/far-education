@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Аттестация инструкторов-проводников · ФАР</title>
+<link rel="icon" type="image/x-icon" href="../favicon.ico">
+<meta name="description" content="Аттестация инструкторов-проводников ФАР: альпинизм и горный туризм, ски-альпинизм и фрирайд. Методика, экзамен, тренажёр теории.">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:#12161b;font-family:'Helvetica Neue',Arial,'Segoe UI',sans-serif;
+    background:#f5f7f9;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-bottom:1px solid #e9edf1}
+  .fnav{background:#0b2f4a;color:#fff}
+  .fnav .row,.navrow{max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;min-height:36px}
+  .fnav a,.track-btn{padding:6px 11px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.78);border:0;background:transparent;cursor:pointer;font-family:inherit}
+  .fnav a.on,.track-btn.is-on{font-weight:600;color:#fff;background:rgba(255,255,255,.16)}
+  .navrow{min-height:64px}
+  .brand img{height:38px;width:auto;display:block}
+  .menu{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+  .menu a{padding:9px 13px;border-radius:8px;color:#3b4650;font-weight:500;font-size:15px}
+  .menu a.cta{background:#1466a8;color:#fff;font-weight:600}
+  .wrap{max-width:1100px;margin:0 auto;padding:36px 24px 8px}
+  .eyebrow{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#0e5c8a;margin:0 0 12px}
+  h1{font-size:clamp(32px,5vw,48px);line-height:1.08;letter-spacing:-.03em;margin:0 0 16px}
+  .lead{font-size:18px;line-height:1.55;color:#4a5560;margin:0 0 28px;max-width:40em}
+  h2{font-size:26px;letter-spacing:-.02em;margin:0 0 16px}
+  .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 48px}
+  .card{background:#fff;border:1px solid #e9edf1;border-radius:16px;padding:22px 20px;box-shadow:0 12px 28px rgba(11,47,74,.06)}
+  .card h3{margin:0 0 8px;font-size:18px}
+  .card p{margin:0;color:#4a5560;line-height:1.5;font-size:15px}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 48px}
+  .docs{margin:0 0 48px}
+  .docs a{color:#1466a8;font-weight:600}
+  .docs li{margin:0 0 8px}
+  .cta-band{background:#0b2f4a;color:#fff;border-radius:18px;padding:28px 26px;margin:0 0 24px}
+  .cta-band p{opacity:.88;margin:8px 0 18px}
+  .btn{display:inline-flex;padding:12px 18px;border-radius:11px;background:#1466a8;color:#fff;font-weight:600}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.35);margin-left:8px}
+  footer{margin-top:48px;padding:28px 24px 36px;background:linear-gradient(180deg,#0e5c8a,#0b2f4a);color:rgba(255,255,255,.82);font-size:14px}
+  footer .inner{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between}
+  footer a{color:#fff;font-weight:600}
+  .track-only{display:none}
+  html[data-track="alpinizm"] .only-alp,html[data-track="ski"] .only-ski{display:block}
+  html[data-track="alpinizm"] .inline-alp,html[data-track="ski"] .inline-ski{display:inline}
+  @media(max-width:820px){.steps,.grid2{grid-template-columns:1fr}.menu{width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="fnav">
+    <div class="row">
+      <div>
+        <a href="../obuchenie/">Обучение</a>
+        <a class="on" href="./">Аттестация</a>
+      </div>
+      <div>
+        <button type="button" class="track-btn is-on" data-track="alpinizm">Альпинизм и ГТ</button>
+        <button type="button" class="track-btn" data-track="ski">Ски-альпинизм</button>
+      </div>
+    </div>
+  </div>
+  <div class="navrow">
+    <a class="brand" href="../"><img src="../logo-far.png" alt="Федерация альпинизма России" width="140" height="43"></a>
+    <nav class="menu">
+      <a href="#poryadok">Порядок</a>
+      <a href="#napravlenie">Направление</a>
+      <a href="#dokumenty">Документы</a>
+      <a href="../trenazher/">Тренажёр</a>
+      <a class="cta" href="#zapis">Подать заявку</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <p class="eyebrow">Федерация альпинизма России</p>
+  <h1>Аттестация инструкторов-проводников</h1>
+  <p class="lead">Официальный квалификационный экзамен по постановлению Правительства РФ № 1003. Экзамен по альпинизму / горному туризму и по ски-альпинизму / фрирайду проводится отдельно.</p>
+
+  <h2 id="poryadok">Как проходит аттестация</h2>
+  <div class="steps">
+    <div class="card">
+      <h3>1. Допуск</h3>
+      <p>После обучения ФАР — или при самостоятельном подтверждении опыта и требований аттестационной комиссии.</p>
+    </div>
+    <div class="card">
+      <h3>2. Теория</h3>
+      <p>25 вопросов своего подвида, 60 минут, зачёт от 20 верных. Можно потренироваться в тренажёре.</p>
+    </div>
+    <div class="card">
+      <h3>3. Практика и реестр</h3>
+      <p>Практический экзамен по методике направления. После сдачи — внесение в федеральный реестр инструкторов-проводников.</p>
+    </div>
+  </div>
+
+  <h2 id="napravlenie">Направление</h2>
+  <div class="grid2">
+    <div class="card only-alp track-only">
+      <h3>Альпинизм и горный туризм</h3>
+      <p>Скальный, снежно-ледовый и комбинированный рельеф, шортропинг, спасательные работы. Отдельные билеты теории и практики.</p>
+    </div>
+    <div class="card only-ski track-only">
+      <h3>Ски-альпинизм и фрирайд</h3>
+      <p>Лавинная безопасность, тактика подъёма и спуска, сопровождение вне трасс. Экзамен отдельно от альпинизма и горного туризма.</p>
+    </div>
+    <div class="card">
+      <h3>Требования к опыту</h3>
+      <p class="only-alp track-only">Разряд по альпинизму / горному туризму либо маршруты 2 к.с. или 12 восхождений; книжка альпиниста / горного туриста.</p>
+      <p class="only-ski track-only">Подтверждённый опыт ски-тура / фрирайда, работа с лавинным комплектом; требования к стажу — по перечню аттестационной комиссии.</p>
+    </div>
+  </div>
+
+  <div class="docs" id="dokumenty">
+    <h2>Документы</h2>
+    <ul>
+      <li class="only-alp track-only"><a href="../Методика_аттестации_альпинизм_горный_туризм.docx">Методика аттестации (альпинизм и горный туризм) — проект</a></li>
+      <li class="only-ski track-only"><a href="../Методика_аттестации_ски_альпинизм_фрирайд.docx">Методика аттестации (ски-альпинизм и фрирайд) — проект</a></li>
+      <li><a href="https://www.consultant.ru/document/cons_doc_LAW_405221/" target="_blank" rel="noopener">Постановление Правительства РФ № 1003</a></li>
+      <li><a href="../obuchenie/#dokumenty">Образовательные программы и сведения об организации</a></li>
+    </ul>
+  </div>
+
+  <div class="cta-band" id="zapis">
+    <h2 style="color:#fff">Заявка на аттестацию</h2>
+    <p>Напишите на почту: направление (альпинизм или ски-альпинизм), опыт и нужен ли допуск через обучение ФАР.</p>
+    <a class="btn" href="mailto:dpo@alpfederation.ru">dpo@alpfederation.ru</a>
+    <a class="btn ghost" href="../trenazher/">Тренажёр теории</a>
+    <a class="btn ghost" href="../obuchenie/">Сначала обучение</a>
+  </div>
+</div>
+
+<footer>
+  <div class="inner">
+    <span>© 2024–2026 Федерация альпинизма России</span>
+    <span><a href="mailto:dpo@alpfederation.ru">dpo@alpfederation.ru</a> · <a href="../obuchenie/#svedeniya">Сведения об организации</a></span>
+  </div>
+</footer>
+<script>
+(function(){
+  function apply(name){
+    if(name!=="ski") name="alpinizm";
+    document.documentElement.setAttribute("data-track", name);
+    document.querySelectorAll(".track-btn").forEach(function(b){
+      b.classList.toggle("is-on", b.getAttribute("data-track")===name);
+    });
+    document.title = name==="ski"
+      ? "Аттестация · ски-альпинизм и фрирайд · ФАР"
+      : "Аттестация · альпинизм и горный туризм · ФАР";
+    try { history.replaceState(null,"","#"+name); } catch(e){}
+  }
+  document.addEventListener("click", function(e){
+    var b=e.target.closest(".track-btn"); if(!b) return;
+    apply(b.getAttribute("data-track"));
+  });
+  var start=(location.hash||"").replace("#","")||"alpinizm";
+  apply(start);
+})();
+</script>
+</body>
+</html>

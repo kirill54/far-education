@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Делит лендинг far-education на:
-  index.html          — хаб выбора трека
-  alpinizm/index.html — альпинизм и горный туризм
-  ski/index.html      — ски-альпинизм и фрирайд
+Устарело: сайт пересобран по функции (обучение / аттестация).
+См. rebuild_by_function.py, /obuchenie/, /attestaciya/.
+Не запускать — перезапишет хаб старой логикой «два направления».
 """
 from __future__ import annotations
 
