@@ -24,14 +24,9 @@ if SKI.exists() and SKI.stat().st_size < 5000:
 TOPBAR = """<header style="position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #e9edf1">
   <div style="background:#0b2f4a;color:#fff">
     <div style="max-width:1200px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:36px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
-        <a href="./" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:600;color:#fff;background:rgba(255,255,255,.16)">Обучение</a>
-        <a href="../attestaciya/" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.78)">Аттестация</a>
-      </div>
       <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:auto">
-        <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.75;margin-right:6px">Направление</span>
-        <button type="button" class="track-btn is-on" data-track="alpinizm">Альпинизм и ГТ</button>
-        <button type="button" class="track-btn" data-track="ski">Ски-альпинизм</button>
+        <a href="../attestaciya/" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:500;color:rgba(255,255,255,.78)">Аттестация</a>
+        <a href="./" style="padding:6px 11px;border-radius:7px;font-size:13px;font-weight:600;color:#fff;background:rgba(255,255,255,.16)">Обучение</a>
       </div>
     </div>
   </div>
