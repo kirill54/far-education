@@ -50,6 +50,10 @@ function normalizeSaleType(value) {
 
 const app = express();
 app.use(express.json());
+app.use((_req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
 
 function attachUser(req, res, next) {
   const header = req.get('authorization') || '';
