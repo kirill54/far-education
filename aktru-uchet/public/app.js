@@ -393,9 +393,16 @@ async function calcPayroll() {
     alert('Укажите период');
     return;
   }
-  const data = await api(
-    `/api/payroll/preview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&unit_slug=cafe`,
-  );
+  let data;
+  try {
+    data = await api(
+      `/api/payroll/preview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&unit_slug=cafe`,
+    );
+  } catch (e) {
+    document.getElementById('paySummary').innerHTML = `<p class="hint">${escapeHtml(e.message)}</p>`;
+    document.getElementById('payTable').innerHTML = '';
+    return;
+  }
   let summary = `<p class="hint">`;
   if (me?.is_manager) {
     summary += `Доход кафе в журнале операций: <strong>${fmtRub(data.ledger_income_rub)}</strong>.
