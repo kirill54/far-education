@@ -540,6 +540,7 @@ app.get('/api/employees', requireAuth, (req, res) => {
       .get(req.user.employee_id);
     return res.json(one ? [one] : []);
   }
+  const includeInactive = req.query.all === '1';
   const rows = unitId
     ? db
         .prepare(
@@ -552,7 +553,8 @@ app.get('/api/employees', requireAuth, (req, res) => {
         .prepare(
           `SELECT e.*, u.name AS unit_name FROM employees e
            JOIN units u ON u.id = e.unit_id
-           WHERE e.active = 1 ORDER BY u.sort_order, e.name`,
+           WHERE ${includeInactive ? '1 = 1' : 'e.active = 1'}
+           ORDER BY e.active DESC, u.sort_order, e.name`,
         )
         .all();
   res.json(rows);
@@ -596,13 +598,16 @@ app.patch('/api/employees/:id', requireAuth, requireManager, (req, res) => {
   ) {
     return res.status(403).json({ error: 'Оклад и процент премии меняет администратор' });
   }
+  const nextName = body.name !== undefined ? String(body.name).trim() : existing.name;
+  if (!nextName) return res.status(400).json({ error: 'Укажите имя' });
   db.prepare(
     `UPDATE employees SET
-       name = ?, role = ?, monthly_base_rub = ?, turnover_bonus_pct = ?, active = ?
+       name = ?, role = ?, unit_id = ?, monthly_base_rub = ?, turnover_bonus_pct = ?, active = ?
      WHERE id = ?`,
   ).run(
-    body.name !== undefined ? String(body.name).trim() : existing.name,
+    nextName,
     body.role !== undefined ? String(body.role).trim() : existing.role,
+    body.unit_id !== undefined ? Number(body.unit_id) : existing.unit_id,
     body.monthly_base_rub !== undefined
       ? Number(body.monthly_base_rub)
       : existing.monthly_base_rub,

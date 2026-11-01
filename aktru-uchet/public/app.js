@@ -124,9 +124,10 @@ function fillEmployeeSelects() {
   const salesSel = document.getElementById('salesEmployee');
   const whEmpSel = document.getElementById('whIssueEmployee');
   const userSel = document.getElementById('userEmployee');
+  const activeEmployees = employees.filter((e) => e.active);
   if (salesSel) {
     salesSel.innerHTML = '';
-    for (const e of employees) {
+    for (const e of activeEmployees) {
       const opt = document.createElement('option');
       opt.value = e.id;
       opt.textContent = `${e.name} (${e.unit_name})`;
@@ -135,7 +136,7 @@ function fillEmployeeSelects() {
   }
   if (whEmpSel) {
     whEmpSel.innerHTML = '';
-    for (const e of employees) {
+    for (const e of activeEmployees) {
       const opt = document.createElement('option');
       opt.value = e.id;
       opt.textContent = e.name;
@@ -334,54 +335,64 @@ async function loadSalesJournal() {
   });
 }
 
+function fillEditEmployeeUnits(selectedId) {
+  const sel = document.getElementById('editEmpUnit');
+  if (!sel) return;
+  sel.innerHTML = '';
+  for (const u of units) {
+    const opt = document.createElement('option');
+    opt.value = u.id;
+    opt.textContent = u.name;
+    sel.appendChild(opt);
+  }
+  if (selectedId) sel.value = String(selectedId);
+}
+
+function openEmployeeEditor(employee) {
+  document.getElementById('editEmpId').value = employee.id;
+  document.getElementById('editEmpName').value = employee.name;
+  document.getElementById('editEmpRole').value = employee.role || '';
+  document.getElementById('editEmpActive').checked = !!employee.active;
+  const base = document.getElementById('editEmpBase');
+  const pct = document.getElementById('editEmpPct');
+  if (base) base.value = employee.monthly_base_rub;
+  if (pct) pct.value = employee.turnover_bonus_pct;
+  fillEditEmployeeUnits(employee.unit_id);
+  document.getElementById('empEditError').hidden = true;
+  openModal('modalEditEmployee');
+}
+
 async function loadEmployees() {
-  employees = await api('/api/employees');
+  employees = await api(me?.is_manager ? '/api/employees?all=1' : '/api/employees');
   fillEmployeeSelects();
   if (!me?.is_manager) return;
   if (!employees.length) {
     document.getElementById('empTable').innerHTML =
-      '<p class="hint">Добавьте сотрудников и выдайте им токены на вкладке «Доступ».</p>';
+      '<p class="hint">Добавьте сотрудников и выдайте им доступ на вкладке «Доступ».</p>';
     return;
   }
-  const canEditPay = !!me?.is_admin;
   let html = `<table><thead><tr>
     <th>ФИО</th><th>Подразделение</th><th>Должность</th>
-    <th class="num">Оклад</th><th class="num">% премии</th><th></th>
+    <th class="num">Оклад</th><th class="num">% премии</th><th>Статус</th><th></th>
   </tr></thead><tbody>`;
   for (const e of employees) {
-    const payCells = canEditPay
-      ? `<td class="num"><input data-pay-base="${e.id}" type="number" min="0" step="100" value="${e.monthly_base_rub}" class="w-28 text-right"></td>
-         <td class="num"><input data-pay-pct="${e.id}" type="number" min="0" max="100" step="0.1" value="${e.turnover_bonus_pct}" class="w-20 text-right"></td>
-         <td><button type="button" class="btn secondary" data-save-pay="${e.id}">Сохранить</button></td>`
-      : `<td class="num">${fmtRub(e.monthly_base_rub)}</td>
-         <td class="num">${e.turnover_bonus_pct}%</td><td></td>`;
     html += `<tr>
       <td>${escapeHtml(e.name)}</td>
-      <td>${e.unit_name}</td>
+      <td>${escapeHtml(e.unit_name)}</td>
       <td>${escapeHtml(e.role || '')}</td>
-      ${payCells}
+      <td class="num">${fmtRub(e.monthly_base_rub)}</td>
+      <td class="num">${e.turnover_bonus_pct}%</td>
+      <td>${e.active ? 'работает' : 'не работает'}</td>
+      <td><button type="button" class="btn secondary" data-edit-emp="${e.id}">Изменить</button></td>
     </tr>`;
   }
   html += '</tbody></table>';
   const empWrap = document.getElementById('empTable');
   empWrap.innerHTML = html;
-  empWrap.querySelectorAll('[data-save-pay]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.savePay;
-      const base = empWrap.querySelector(`[data-pay-base="${id}"]`).value;
-      const pct = empWrap.querySelector(`[data-pay-pct="${id}"]`).value;
-      try {
-        await api(`/api/employees/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            monthly_base_rub: Number(base),
-            turnover_bonus_pct: Number(pct),
-          }),
-        });
-        btn.textContent = 'Сохранено';
-      } catch (err) {
-        alert(err.message);
-      }
+  empWrap.querySelectorAll('[data-edit-emp]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const employee = employees.find((row) => row.id === Number(btn.dataset.editEmp));
+      if (employee) openEmployeeEditor(employee);
     });
   });
 }
@@ -931,6 +942,35 @@ function bindForms() {
       ev.target.reset();
       ev.target.querySelector('[name=occurred_on]').value = todayIso();
       await loadSalesJournal();
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    }
+  });
+
+  document.getElementById('empEditForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('empEditError');
+    err.hidden = true;
+    const fd = new FormData(ev.target);
+    const body = {
+      name: fd.get('name'),
+      unit_id: Number(fd.get('unit_id')),
+      role: fd.get('role'),
+      active: document.getElementById('editEmpActive').checked,
+    };
+    if (me?.is_admin) {
+      body.monthly_base_rub = Number(fd.get('monthly_base_rub'));
+      body.turnover_bonus_pct = Number(fd.get('turnover_bonus_pct'));
+    }
+    try {
+      await api(`/api/employees/${fd.get('id')}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      closeModal('modalEditEmployee');
+      await loadEmployees();
+      if (me?.is_manager || me?.role === 'staff') await calcPayroll();
     } catch (e) {
       err.textContent = e.message;
       err.hidden = false;

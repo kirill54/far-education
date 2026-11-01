@@ -277,7 +277,7 @@
       </div>
       <div class="box">
         <h2>Список</h2>
-        <p class="hint" data-roles="admin">Оклад и процент премии меняет администратор. Сохраните строку после правки.</p>
+        <p class="hint">Кнопка «Изменить» открывает карточку: имя, подразделение, должность. Оклад и процент премии в той же карточке меняет администратор.</p>
         <div id="empTable"></div>
       </div>
     </section>
@@ -455,6 +455,35 @@
         </label>
         <button type="submit" class="btn">Добавить</button>
       </form>
+    </div>
+  </div>
+  <div id="modalEditEmployee" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <div class="modal-head"><h2>Сотрудник</h2><button type="button" class="btn secondary" data-close="modalEditEmployee">Закрыть</button></div>
+      <form id="empEditForm" class="row">
+        <input type="hidden" name="id" id="editEmpId">
+        <label>ФИО
+          <input name="name" id="editEmpName" required>
+        </label>
+        <label>Подразделение
+          <select name="unit_id" id="editEmpUnit" required></select>
+        </label>
+        <label>Должность
+          <input name="role" id="editEmpRole">
+        </label>
+        <label class="flex-row items-center gap-2" data-roles="admin">Оклад, ₽/мес
+          <input type="number" name="monthly_base_rub" id="editEmpBase" min="0" step="100">
+        </label>
+        <label data-roles="admin">% премии
+          <input type="number" name="turnover_bonus_pct" id="editEmpPct" min="0" max="100" step="0.1">
+        </label>
+        <label class="flex-row items-center gap-2 text-sm font-normal">
+          <input type="checkbox" name="active" id="editEmpActive" class="h-4 w-4">
+          Работает
+        </label>
+        <button type="submit" class="btn">Сохранить</button>
+      </form>
+      <p class="error" id="empEditError" hidden></p>
     </div>
   </div>
   <div id="modalEditItem" class="modal-backdrop" hidden>
