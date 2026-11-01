@@ -1,0 +1,227 @@
+@font-face {
+  font-family: 'Formular';
+  src: local('Formular'), local('Formular-Regular');
+  font-weight: 400;
+  font-display: swap;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Formular', 'Helvetica Neue', Arial, sans-serif;
+  color: #12161b;
+  background: linear-gradient(180deg, #f4f7fa 0%, #eef2f6 100%);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+h1 {
+  margin: 0 0 6px;
+  font-size: clamp(26px, 4vw, 34px);
+  letter-spacing: -0.02em;
+}
+.sub {
+  margin: 0;
+  color: #4a5560;
+  font-size: 15px;
+  max-width: 42em;
+  line-height: 1.5;
+}
+.token-box {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.token-box input {
+  width: 220px;
+  padding: 8px 10px;
+  border: 1px solid #c5d0da;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.token-box button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #0e5c8a;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+nav.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+nav.tabs button {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid #c5d0da;
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  color: #0b2f4a;
+}
+nav.tabs button.active {
+  background: #0e5c8a;
+  border-color: #0e5c8a;
+  color: #fff;
+}
+.panel {
+  display: none;
+}
+.panel.active {
+  display: block;
+}
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.card {
+  background: #fff;
+  border: 1px solid #e3e8ed;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 24px rgba(11, 47, 74, 0.06);
+}
+.card .label {
+  font-size: 13px;
+  color: #626c78;
+  margin-bottom: 6px;
+}
+.card .value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.card .value.positive {
+  color: #0a7a4b;
+}
+.card .value.negative {
+  color: #b42318;
+}
+.card.total {
+  background: linear-gradient(135deg, #0e5c8a, #0b2f4a);
+  color: #fff;
+  border: none;
+}
+.card.total .label {
+  color: rgba(255, 255, 255, 0.82);
+}
+.box {
+  background: #fff;
+  border: 1px solid #e3e8ed;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(11, 47, 74, 0.05);
+}
+.box h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+form.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b4650;
+}
+input,
+select,
+textarea {
+  padding: 9px 10px;
+  border: 1px solid #c5d0da;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
+textarea {
+  min-height: 56px;
+  resize: vertical;
+}
+.btn {
+  padding: 10px 16px;
+  border-radius: 9px;
+  border: none;
+  background: #1466a8;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn.secondary {
+  background: #eef2f6;
+  color: #0b2f4a;
+}
+.btn.danger {
+  background: #fee4e2;
+  color: #b42318;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th,
+td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid #eef1f4;
+}
+th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #626c78;
+}
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: end;
+}
+.hint {
+  font-size: 13px;
+  color: #626c78;
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+.error {
+  color: #b42318;
+  font-size: 13px;
+  margin-top: 8px;
+}
+@media (max-width: 640px) {
+  form.row {
+    grid-template-columns: 1fr;
+  }
+}

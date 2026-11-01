@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Актру — учёт доходов и расходов</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>База Актру — учёт</h1>
+        <p class="sub">Кафе, столовая, склад, баня: операции, баланс по подразделениям и расчёт зарплат с премией от оборота кафе.</p>
+      </div>
+      <div class="token-box">
+        <input type="password" id="tokenInput" placeholder="Токен доступа" autocomplete="off">
+        <button type="button" id="saveToken">Сохранить</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" class="active" data-tab="dashboard">Обзор</button>
+      <button type="button" data-tab="operations">Операции</button>
+      <button type="button" data-tab="payroll">Зарплаты</button>
+      <button type="button" data-tab="staff">Сотрудники</button>
+    </nav>
+
+    <section id="panel-dashboard" class="panel active">
+      <div class="filters">
+        <label>Период с
+          <input type="date" id="dashFrom">
+        </label>
+        <label>по
+          <input type="date" id="dashTo">
+        </label>
+        <button type="button" class="btn secondary" id="dashApply">Применить</button>
+        <button type="button" class="btn secondary" id="dashSeason">Сезон (май–сент)</button>
+      </div>
+      <div id="balanceCards" class="grid-cards"></div>
+      <div class="box">
+        <h2>Последние операции</h2>
+        <div id="recentTx"></div>
+      </div>
+    </section>
+
+    <section id="panel-operations" class="panel">
+      <div class="box">
+        <h2>Новая операция</h2>
+        <form id="txForm" class="row">
+          <label>Дата
+            <input type="date" name="occurred_on" required>
+          </label>
+          <label>Подразделение
+            <select name="unit_id" id="txUnit" required></select>
+          </label>
+          <label>Тип
+            <select name="kind" id="txKind" required>
+              <option value="income">Доход</option>
+              <option value="expense">Расход</option>
+            </select>
+          </label>
+          <label>Категория
+            <select name="category_id" id="txCategory"></select>
+          </label>
+          <label>Сумма, ₽
+            <input type="number" name="amount_rub" min="0.01" step="0.01" required>
+          </label>
+          <label style="grid-column: 1 / -1">Комментарий
+            <textarea name="description" placeholder="Например: смена 12.07, касса"></textarea>
+          </label>
+          <button type="submit" class="btn">Добавить</button>
+        </form>
+        <p class="error" id="txError" hidden></p>
+      </div>
+      <div class="box">
+        <h2>Журнал</h2>
+        <div class="filters">
+          <label>С
+            <input type="date" id="txFilterFrom">
+          </label>
+          <label>По
+            <input type="date" id="txFilterTo">
+          </label>
+          <label>Подразделение
+            <select id="txFilterUnit"><option value="">Все</option></select>
+          </label>
+          <button type="button" class="btn secondary" id="txRefresh">Обновить</button>
+        </div>
+        <div id="txTable"></div>
+      </div>
+    </section>
+
+    <section id="panel-payroll" class="panel">
+      <div class="box">
+        <h2>Расчёт зарплат (кафе)</h2>
+        <p class="hint">Оклад пропорционален дням периода (30 дней = полный месяц). Премия: доля от выручки кафе за период делится между сотрудниками по полям «% от фонда».</p>
+        <div class="filters">
+          <label>С
+            <input type="date" id="payFrom">
+          </label>
+          <label>По
+            <input type="date" id="payTo">
+          </label>
+          <label>Фонд премий, % от выручки кафе
+            <input type="number" id="payPoolPct" min="0" max="100" step="0.1">
+          </label>
+          <button type="button" class="btn" id="payCalc">Рассчитать</button>
+          <button type="button" class="btn secondary" id="paySaveSettings">Сохранить % фонда</button>
+        </div>
+        <div id="paySummary"></div>
+        <div id="payTable"></div>
+      </div>
+    </section>
+
+    <section id="panel-staff" class="panel">
+      <div class="box">
+        <h2>Добавить сотрудника</h2>
+        <form id="empForm" class="row">
+          <label>ФИО
+            <input name="name" required>
+          </label>
+          <label>Подразделение
+            <select name="unit_id" id="empUnit" required></select>
+          </label>
+          <label>Должность
+            <input name="role" placeholder="Барista, повар…">
+          </label>
+          <label>Оклад, ₽/мес
+            <input type="number" name="monthly_base_rub" min="0" step="100" value="0">
+          </label>
+          <label>% от премиального фонда
+            <input type="number" name="turnover_bonus_pct" min="0" step="1" value="0" title="Сумма процентов по всем сотрудникам кафе — 100% фонда">
+          </label>
+          <button type="submit" class="btn">Добавить</button>
+        </form>
+        <p class="error" id="empError" hidden></p>
+      </div>
+      <div class="box">
+        <h2>Список</h2>
+        <div id="empTable"></div>
+      </div>
+    </section>
+  </div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
