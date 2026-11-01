@@ -63,6 +63,30 @@ function migrate(db) {
 
     CREATE INDEX IF NOT EXISTS idx_tx_unit_date ON transactions(unit_id, occurred_on);
     CREATE INDEX IF NOT EXISTS idx_tx_kind ON transactions(kind);
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('admin', 'manager', 'staff')),
+      token_hash TEXT NOT NULL UNIQUE,
+      employee_id INTEGER REFERENCES employees(id),
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS employee_sales (
+      id INTEGER PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES employees(id),
+      unit_id INTEGER NOT NULL REFERENCES units(id),
+      amount_rub REAL NOT NULL CHECK (amount_rub > 0),
+      occurred_on TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      created_by_user_id INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sales_emp_date ON employee_sales(employee_id, occurred_on);
+    CREATE INDEX IF NOT EXISTS idx_sales_unit_date ON employee_sales(unit_id, occurred_on);
   `);
 }
 
@@ -115,8 +139,8 @@ function seedIfEmpty(db) {
   db.prepare(
     `INSERT INTO payroll_settings (key, value) VALUES (?, ?)`,
   ).run(
-    'cafe_bonus_pool_pct',
-    JSON.stringify({ value: 8, note: 'Доля выручки кафе в общий премиальный фонд (%)' }),
+    'season',
+    JSON.stringify({ from_month: 5, to_month: 9, note: 'Летний сезон' }),
   );
 }
 

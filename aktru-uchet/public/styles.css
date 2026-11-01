@@ -61,6 +61,24 @@ h1 {
   font-weight: 600;
   cursor: pointer;
 }
+.user-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0e5c8a;
+  max-width: 180px;
+  text-align: right;
+  line-height: 1.3;
+}
+.token-reveal {
+  background: #0b2f4a;
+  color: #e8f4fc;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 nav.tabs {
   display: flex;
   flex-wrap: wrap;
