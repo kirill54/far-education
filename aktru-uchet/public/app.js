@@ -208,7 +208,8 @@ async function loadDashboard(from, to) {
     root.appendChild(card);
   }
   document.getElementById('dashExtra').innerHTML = `
-    <p class="hint" style="margin:0">Продажи сотрудников для премий: <strong>${fmtRub(data.reported_sales_rub)}</strong> (${data.reported_sales_count} записей).</p>`;
+    <p class="hint" style="margin:0">Принятые кассы: <strong>${fmtRub(data.reported_sales_rub)}</strong> (${data.reported_sales_count}).
+    Ждут приёма: <strong>${fmtRub(data.pending_sales_rub || 0)}</strong> (${data.pending_sales_count || 0}).</p>`;
   const low = document.getElementById('dashLowStock');
   if (!data.low_stock.length) {
     low.innerHTML = '<p class="hint" style="margin:0">Все позиции выше минимума.</p>';
@@ -292,22 +293,78 @@ async function refreshDashboard() {
 function renderSalesTable(rows, canDelete) {
   if (!rows.length) return '<p class="hint">Продаж пока нет — внесите первую сумму.</p>';
   let html = `<table><thead><tr>
-    <th>Дата</th><th>Сотрудник</th><th class="num">Сумма</th><th>Комментарий</th>
+    <th>Дата</th><th>Сотрудник</th><th class="num">Сумма</th><th>Статус</th><th>Комментарий</th>
     ${canDelete ? '<th></th>' : ''}
   </tr></thead><tbody>`;
   for (const s of rows) {
+    const accepted = !!s.shift_id;
     html += `<tr>
       <td>${s.occurred_on}</td>
       <td>${escapeHtml(s.employee_name)}</td>
       <td class="num">${fmtRub(s.amount_rub)}</td>
+      <td>${accepted ? 'касса принята' : 'черновик'}</td>
       <td>${escapeHtml(s.note || '')}</td>`;
-    if (canDelete) {
+    if (canDelete && !accepted) {
       html += `<td><button type="button" class="btn danger" data-del-sale="${s.id}">×</button></td>`;
+    } else if (canDelete) {
+      html += '<td></td>';
     }
     html += '</tr>';
   }
   html += '</tbody></table>';
   return html;
+}
+
+function refreshAcceptPreview() {
+  const draft = Number(document.getElementById('acceptDraft').dataset.amount) || 0;
+  const cash = Number(document.getElementById('acceptCash').value) || 0;
+  const card = Number(document.getElementById('acceptCard').value) || 0;
+  const accepted = cash + card;
+  const diff = Math.round((draft - accepted) * 100) / 100;
+  const preview = document.getElementById('acceptPreview');
+  preview.textContent = diff === 0
+    ? `К учёту ${fmtRub(accepted)} — сходится с черновиком.`
+    : `К учёту ${fmtRub(accepted)}. Расхождение с черновиком: ${fmtRub(diff)}.`;
+}
+
+async function loadOpenShifts() {
+  const root = document.getElementById('openShifts');
+  if (!root || !me?.is_manager) return;
+  const rows = await api('/api/cash-shifts/open');
+  if (!rows.length) {
+    root.innerHTML = '<p class="hint">Нет смен, ожидающих приёма кассы.</p>';
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Дата</th><th>Сотрудник</th><th>Подразделение</th><th class="num">Черновик</th><th></th>
+  </tr></thead><tbody>`;
+  for (const row of rows) {
+    html += `<tr>
+      <td>${row.occurred_on}</td>
+      <td>${escapeHtml(row.employee_name)}</td>
+      <td>${escapeHtml(row.unit_name)}</td>
+      <td class="num">${fmtRub(row.draft_rub)}</td>
+      <td><button type="button" class="btn" data-accept-shift="${row.employee_id}" data-unit="${row.unit_id}" data-date="${row.occurred_on}" data-draft="${row.draft_rub}" data-name="${escapeHtml(row.employee_name)}">Принять</button></td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  root.innerHTML = html;
+  root.querySelectorAll('[data-accept-shift]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.getElementById('acceptEmployeeId').value = btn.dataset.acceptShift;
+      document.getElementById('acceptUnitId').value = btn.dataset.unit;
+      document.getElementById('acceptDate').value = btn.dataset.date;
+      document.getElementById('acceptDraft').value = fmtRub(Number(btn.dataset.draft));
+      document.getElementById('acceptDraft').dataset.amount = btn.dataset.draft;
+      document.getElementById('acceptCash').value = btn.dataset.draft;
+      document.getElementById('acceptCard').value = '0';
+      document.getElementById('acceptNote').value = '';
+      document.getElementById('acceptWho').textContent = `${btn.dataset.name}, ${btn.dataset.date}`;
+      document.getElementById('acceptError').hidden = true;
+      refreshAcceptPreview();
+      openModal('modalAcceptShift');
+    });
+  });
 }
 
 async function loadSalesJournal() {
@@ -317,11 +374,13 @@ async function loadSalesJournal() {
   if (from) q.set('from', from);
   if (to) q.set('to', to);
   const rows = await api(`/api/sales?${q}`);
-  const total = rows.reduce((s, r) => s + r.amount_rub, 0);
+  const draft = rows.filter((r) => !r.shift_id).reduce((s, r) => s + r.amount_rub, 0);
   const wrap = document.getElementById('salesTable');
   wrap.innerHTML = renderSalesTable(rows, true);
-  document.getElementById('salesTotal').textContent =
-    rows.length ? `Итого за период: ${fmtRub(total)}` : '';
+  document.getElementById('salesTotal').textContent = rows.length
+    ? `Черновик за период: ${fmtRub(draft)}. Принятая касса считается в зарплате и в доходе.`
+    : '';
+  if (me?.is_manager) await loadOpenShifts();
   wrap.querySelectorAll('[data-del-sale]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (!confirm('Удалить запись?')) return;
@@ -416,15 +475,15 @@ async function calcPayroll() {
   }
   let summary = `<p class="hint">`;
   if (me?.is_manager) {
-    summary += `Доход кафе в журнале операций: <strong>${fmtRub(data.ledger_income_rub)}</strong>.
-    Сумма внесённых продаж (на премии): <strong>${fmtRub(data.reported_sales_total_rub)}</strong>. `;
+    summary += `Доход кафе в журнале: <strong>${fmtRub(data.ledger_income_rub)}</strong>.
+    Принятые кассы для премий: <strong>${fmtRub(data.reported_sales_total_rub)}</strong>. `;
   }
   summary += `Итого к выплате: <strong>${fmtRub(data.grand_total_rub)}</strong>.</p>`;
   document.getElementById('paySummary').innerHTML = summary;
 
   let html = `<table><thead><tr>
     <th>Сотрудник</th><th>Должность</th>
-    <th class="num">Оклад</th><th class="num">Внесённые продажи</th>
+    <th class="num">Оклад</th><th class="num">Принятая касса</th>
     <th class="num">% премии</th><th class="num">Премия</th><th class="num">Итого</th>
   </tr></thead><tbody>`;
   for (const line of data.employees) {
@@ -1051,6 +1110,34 @@ function bindForms() {
     refreshDashboard();
   });
   document.getElementById('txRefresh')?.addEventListener('click', loadTxJournal);
+  document.getElementById('acceptCash')?.addEventListener('input', refreshAcceptPreview);
+  document.getElementById('acceptCard')?.addEventListener('input', refreshAcceptPreview);
+  document.getElementById('acceptShiftForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('acceptError');
+    err.hidden = true;
+    const fd = new FormData(ev.target);
+    try {
+      await api('/api/cash-shifts', {
+        method: 'POST',
+        body: JSON.stringify({
+          employee_id: Number(fd.get('employee_id')),
+          unit_id: Number(fd.get('unit_id')),
+          occurred_on: fd.get('occurred_on'),
+          cash_rub: Number(fd.get('cash_rub')),
+          card_rub: Number(fd.get('card_rub')) || 0,
+          note: fd.get('note'),
+        }),
+      });
+      closeModal('modalAcceptShift');
+      await loadSalesJournal();
+      await refreshDashboard();
+      if (me?.is_manager || me?.role === 'staff') await calcPayroll();
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    }
+  });
   document.getElementById('salesRefresh')?.addEventListener('click', loadSalesJournal);
   document.getElementById('whRefresh')?.addEventListener('click', () => {
     loadWarehouseItems();

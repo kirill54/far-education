@@ -338,7 +338,14 @@ app.get('/api/dashboard', requireAuth, requireManager, (req, res) => {
   }
   const reported = db
     .prepare(
-      `SELECT COALESCE(SUM(amount_rub), 0) AS total, COUNT(*) AS cnt FROM employee_sales WHERE 1=1 ${saleWhere}`,
+      `SELECT COALESCE(SUM(cash_rub + card_rub), 0) AS total, COUNT(*) AS cnt
+       FROM cash_shifts WHERE 1=1 ${saleWhere}`,
+    )
+    .get(...saleParams);
+  const pending = db
+    .prepare(
+      `SELECT COALESCE(SUM(amount_rub), 0) AS total, COUNT(*) AS cnt
+       FROM employee_sales WHERE shift_id IS NULL ${saleWhere}`,
     )
     .get(...saleParams);
 
@@ -372,6 +379,8 @@ app.get('/api/dashboard', requireAuth, requireManager, (req, res) => {
     units,
     reported_sales_rub: reported.total,
     reported_sales_count: reported.cnt,
+    pending_sales_rub: pending.total,
+    pending_sales_count: pending.cnt,
     low_stock: low.map((i) => ({
       name: i.name,
       balance: i.stock_balance,
@@ -466,7 +475,7 @@ app.get('/api/sales', requireAuth, (req, res) => {
   const rows = db
     .prepare(
       `SELECT s.id, s.employee_id, e.name AS employee_name, s.unit_id, u.name AS unit_name,
-              s.amount_rub, s.occurred_on, s.note, s.created_at,
+              s.amount_rub, s.occurred_on, s.note, s.created_at, s.shift_id,
               cu.name AS created_by_name
        FROM employee_sales s
        JOIN employees e ON e.id = s.employee_id
@@ -502,6 +511,14 @@ app.post('/api/sales', requireAuth, (req, res) => {
   if (!Number.isFinite(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Сумма должна быть больше 0' });
   }
+  const accepted = db
+    .prepare(
+      `SELECT id FROM cash_shifts WHERE employee_id = ? AND unit_id = ? AND occurred_on = ?`,
+    )
+    .get(empId, resolvedUnitId, occurred_on);
+  if (accepted) {
+    return res.status(400).json({ error: 'Касса за этот день уже принята' });
+  }
 
   const creatorId = req.user.id > 0 ? req.user.id : null;
   const info = db
@@ -517,6 +534,9 @@ app.delete('/api/sales/:id', requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const row = db.prepare('SELECT * FROM employee_sales WHERE id = ?').get(id);
   if (!row) return res.status(404).json({ error: 'Не найдено' });
+  if (row.shift_id) {
+    return res.status(400).json({ error: 'Касса за этот день уже принята' });
+  }
   if (req.user.role === 'staff') {
     if (row.employee_id !== req.user.employee_id) {
       return res.status(403).json({ error: 'Можно удалять только свои продажи' });
@@ -733,11 +753,131 @@ app.put('/api/payroll/settings', requireAuth, requireManager, (req, res) => {
 function sumEmployeeSales(employeeId, unitId, from, to) {
   return db
     .prepare(
-      `SELECT COALESCE(SUM(amount_rub), 0) AS total FROM employee_sales
+      `SELECT COALESCE(SUM(cash_rub + card_rub), 0) AS total FROM cash_shifts
        WHERE employee_id = ? AND unit_id = ? AND occurred_on >= ? AND occurred_on <= ?`,
     )
     .get(employeeId, unitId, from, to).total;
 }
+
+function incomeCategoryId(unitId, name) {
+  const named = db
+    .prepare(
+      `SELECT id FROM categories WHERE unit_id = ? AND kind = 'income' AND name = ?`,
+    )
+    .get(unitId, name);
+  if (named) return named.id;
+  const any = db
+    .prepare(
+      `SELECT id FROM categories WHERE unit_id = ? AND kind = 'income' ORDER BY id LIMIT 1`,
+    )
+    .get(unitId);
+  return any?.id ?? null;
+}
+
+app.get('/api/cash-shifts/open', requireAuth, requireManager, (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT s.employee_id, e.name AS employee_name, s.unit_id, u.name AS unit_name,
+              s.occurred_on, SUM(s.amount_rub) AS draft_rub, COUNT(*) AS lines
+       FROM employee_sales s
+       JOIN employees e ON e.id = s.employee_id
+       JOIN units u ON u.id = s.unit_id
+       WHERE s.shift_id IS NULL
+       GROUP BY s.employee_id, s.unit_id, s.occurred_on
+       ORDER BY s.occurred_on DESC, e.name`,
+    )
+    .all();
+  res.json(rows);
+});
+
+app.post('/api/cash-shifts', requireAuth, requireManager, (req, res) => {
+  const body = req.body || {};
+  const employeeId = Number(body.employee_id);
+  const unitId = Number(body.unit_id);
+  const occurredOn = body.occurred_on;
+  const cash = Number(body.cash_rub);
+  const card = Number(body.card_rub) || 0;
+  if (!employeeId || !unitId || !occurredOn) {
+    return res.status(400).json({ error: 'Нужны сотрудник, подразделение и дата' });
+  }
+  if (!Number.isFinite(cash) || cash < 0 || !Number.isFinite(card) || card < 0 || cash + card <= 0) {
+    return res.status(400).json({ error: 'Укажите принятые наличные и, если был, безнал' });
+  }
+  const emp = db.prepare('SELECT * FROM employees WHERE id = ?').get(employeeId);
+  if (!emp) return res.status(404).json({ error: 'Сотрудник не найден' });
+
+  const accept = db.transaction(() => {
+    const drafts = db
+      .prepare(
+        `SELECT id, amount_rub FROM employee_sales
+         WHERE employee_id = ? AND unit_id = ? AND occurred_on = ? AND shift_id IS NULL`,
+      )
+      .all(employeeId, unitId, occurredOn);
+    if (!drafts.length) {
+      throw new Error('Нет черновика смены');
+    }
+    const draft = drafts.reduce((sum, row) => sum + row.amount_rub, 0);
+    const accepted = cash + card;
+    let note = String(body.note || '').trim();
+    if (Math.abs(draft - accepted) > 0.009) {
+      const gap = `Черновик ${draft}, принято ${accepted}`;
+      note = note ? `${note}. ${gap}` : gap;
+    }
+    const info = db
+      .prepare(
+        `INSERT INTO cash_shifts
+           (employee_id, unit_id, occurred_on, draft_rub, cash_rub, card_rub, note, accepted_by_user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        employeeId,
+        unitId,
+        occurredOn,
+        draft,
+        cash,
+        card,
+        note,
+        req.user.id > 0 ? req.user.id : null,
+      );
+    const shiftId = info.lastInsertRowid;
+    db.prepare(
+      `UPDATE employee_sales SET shift_id = ?
+       WHERE employee_id = ? AND unit_id = ? AND occurred_on = ? AND shift_id IS NULL`,
+    ).run(shiftId, employeeId, unitId, occurredOn);
+    const insertTx = db.prepare(
+      `INSERT INTO transactions (unit_id, kind, category_id, amount_rub, occurred_on, description)
+       VALUES (?, 'income', ?, ?, ?, ?)`,
+    );
+    if (cash > 0) {
+      insertTx.run(
+        unitId,
+        incomeCategoryId(unitId, 'Выручка касса'),
+        cash,
+        occurredOn,
+        `Касса принята: ${emp.name}`,
+      );
+    }
+    if (card > 0) {
+      insertTx.run(
+        unitId,
+        incomeCategoryId(unitId, 'Безнал / перевод'),
+        card,
+        occurredOn,
+        `Безнал принят: ${emp.name}`,
+      );
+    }
+    return { id: shiftId, draft_rub: draft, accepted_rub: accepted, note };
+  });
+
+  try {
+    res.status(201).json(accept());
+  } catch (err) {
+    const message = err.message === 'Нет черновика смены'
+      ? err.message
+      : 'Касса за этот день уже принята';
+    res.status(400).json({ error: message });
+  }
+});
 
 app.get('/api/payroll/preview', requireAuth, (req, res) => {
   const { from, to, unit_slug = 'cafe' } = req.query;
@@ -792,7 +932,7 @@ app.get('/api/payroll/preview', requireAuth, (req, res) => {
     period: { from, to },
     ledger_income_rub: cafeIncomeLedger,
     reported_sales_total_rub: reportedTotal,
-    note: 'Премия считается только от продаж, внесённых сотрудниками. % премии задаёт управляющий.',
+    note: 'Премия считается от принятой кассы: наличные и безнал. Черновик смены в расчёт не входит.',
     employees: lines,
     grand_total_rub: Math.round(lines.reduce((s, l) => s + l.total_rub, 0) * 100) / 100,
   });

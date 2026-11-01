@@ -137,7 +137,7 @@
     <section id="panel-sales" class="panel" data-roles="admin,manager,staff">
       <div class="box">
         <h2>Внести продажу</h2>
-        <p class="hint" id="salesHint">В учёт премии попадают только суммы, которые вы сами внесли здесь. Оклад не зависит от продаж.</p>
+        <p class="hint" id="salesHint">Это черновик смены. В доход и премию сумма попадёт, когда администратор примет кассу.</p>
         <form id="salesForm" class="row">
           <label id="salesEmpLabel" hidden>Сотрудник
             <select name="employee_id" id="salesEmployee"></select>
@@ -154,6 +154,11 @@
           <button type="submit" class="btn">Сохранить</button>
         </form>
         <p class="error" id="salesError" hidden></p>
+      </div>
+      <div class="box" id="openShiftsBox" data-roles="admin,manager">
+        <h2>Кассы к приёму</h2>
+        <p class="hint">Сверьте черновик с наличными. В учёт пойдёт принятая сумма плюс безнал. Если конверт меньше черновика, разница останется в пометке.</p>
+        <div id="openShifts"></div>
       </div>
       <div class="box">
         <h2>Журнал продаж за текущий месяц</h2>
@@ -455,6 +460,32 @@
         </label>
         <button type="submit" class="btn">Добавить</button>
       </form>
+    </div>
+  </div>
+  <div id="modalAcceptShift" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <div class="modal-head"><h2>Принять кассу</h2><button type="button" class="btn secondary" data-close="modalAcceptShift">Закрыть</button></div>
+      <form id="acceptShiftForm" class="row">
+        <input type="hidden" name="employee_id" id="acceptEmployeeId">
+        <input type="hidden" name="unit_id" id="acceptUnitId">
+        <input type="hidden" name="occurred_on" id="acceptDate">
+        <p class="hint sm:col-span-2 lg:col-span-3" id="acceptWho"></p>
+        <label>Черновик, ₽
+          <input id="acceptDraft" readonly>
+        </label>
+        <label>Наличные, ₽
+          <input type="number" name="cash_rub" id="acceptCash" min="0" step="0.01" required>
+        </label>
+        <label>Безнал / перевод, ₽
+          <input type="number" name="card_rub" id="acceptCard" min="0" step="0.01" value="0">
+        </label>
+        <p class="hint sm:col-span-2 lg:col-span-3" id="acceptPreview"></p>
+        <label class="sm:col-span-2 lg:col-span-3">Пометка
+          <textarea name="note" id="acceptNote" placeholder="Если сумма не сошлась — коротко почему"></textarea>
+        </label>
+        <button type="submit" class="btn">Касса принята</button>
+      </form>
+      <p class="error" id="acceptError" hidden></p>
     </div>
   </div>
   <div id="modalEditEmployee" class="modal-backdrop" hidden>

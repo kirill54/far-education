@@ -88,6 +88,20 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_sales_emp_date ON employee_sales(employee_id, occurred_on);
     CREATE INDEX IF NOT EXISTS idx_sales_unit_date ON employee_sales(unit_id, occurred_on);
 
+    CREATE TABLE IF NOT EXISTS cash_shifts (
+      id INTEGER PRIMARY KEY,
+      employee_id INTEGER NOT NULL REFERENCES employees(id),
+      unit_id INTEGER NOT NULL REFERENCES units(id),
+      occurred_on TEXT NOT NULL,
+      draft_rub REAL NOT NULL,
+      cash_rub REAL NOT NULL,
+      card_rub REAL NOT NULL DEFAULT 0,
+      note TEXT NOT NULL DEFAULT '',
+      accepted_by_user_id INTEGER,
+      accepted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (employee_id, unit_id, occurred_on)
+    );
+
     CREATE TABLE IF NOT EXISTS warehouse_items (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
@@ -132,6 +146,7 @@ function migrate(db) {
     );
   `);
   ensureColumn(db, 'users', 'email', 'TEXT');
+  ensureColumn(db, 'employee_sales', 'shift_id', 'INTEGER');
   db.exec(
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL`,
   );
