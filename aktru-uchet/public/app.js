@@ -47,7 +47,7 @@ function seasonToDate(year) {
 function roleAllowed(rolesStr) {
   if (!me) return false;
   const roles = rolesStr.split(',').map((r) => r.trim());
-  if (me.role === 'admin') return true;
+  if (me.role === 'admin' || me.role === 'owner') return true;
   return roles.includes(me.role);
 }
 
@@ -63,7 +63,14 @@ function applyRoleUI() {
   const badge = document.getElementById('userBadge');
   if (me) {
     badge.hidden = false;
-    badge.textContent = `${me.name} · ${me.role}`;
+    const roleName = {
+      owner: 'владелец',
+      admin: 'администратор',
+      manager: 'управляющий',
+      staff: 'сотрудник',
+      instructor: 'инструктор',
+    }[me.role] || me.role;
+    badge.textContent = `${me.name} · ${roleName}`;
   } else {
     badge.hidden = true;
   }
@@ -473,16 +480,76 @@ async function loadWarehouseMovements() {
   });
 }
 
+let guideInstructors = [];
+let guideServices = [];
+
+async function loadGuides() {
+  const servicesEl = document.getElementById('guideServices');
+  if (!servicesEl) return;
+  guideServices = await api('/api/guide-services');
+  guideInstructors = await api('/api/instructors');
+  servicesEl.innerHTML = guideServices.length
+    ? `<table><thead><tr><th>Услуга</th><th class="num">Цена</th><th class="num">Выплата</th></tr></thead><tbody>${
+      guideServices.map((s) => `<tr><td>${escapeHtml(s.name)}</td><td class="num">${fmtRub(s.price_rub)}</td><td class="num">${fmtRub(s.payout_rub)}</td></tr>`).join('')
+    }</tbody></table>`
+    : '<p class="hint">Услуг пока нет.</p>';
+  const serviceSel = document.getElementById('guideService');
+  serviceSel.innerHTML = guideServices.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  const instSel = document.getElementById('guideInstructor');
+  if (instSel) {
+    instSel.innerHTML = guideInstructors.map((i) => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+  }
+  const userInst = document.getElementById('userInstructor');
+  if (userInst && me?.is_admin) {
+    const keep = userInst.value;
+    userInst.innerHTML = '<option value="">—</option>' + guideInstructors.map((i) => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+    userInst.value = keep;
+  }
+}
+
+async function loadGuideReport() {
+  const from = document.getElementById('guideFrom').value;
+  const to = document.getElementById('guideTo').value;
+  if (!from || !to) return;
+  const data = await api(`/api/guide-payout?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  const jobs = await api(`/api/guide-jobs?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  document.getElementById('guidePayout').innerHTML = `
+    <p class="hint">Туристам начислено <strong>${fmtRub(data.totals.revenue_rub)}</strong>.
+    К выплате инструкторам <strong>${fmtRub(data.totals.payout_rub)}</strong>.</p>
+    <table><thead><tr><th>Инструктор</th><th class="num">Услуг</th><th class="num">Туристов</th><th class="num">Выручка</th><th class="num">Выплата</th></tr></thead><tbody>
+    ${data.instructors.map((row) => `<tr><td>${escapeHtml(row.name)}</td><td class="num">${row.quantity}</td><td class="num">${row.tourists}</td><td class="num">${fmtRub(row.revenue_rub)}</td><td class="num">${fmtRub(row.payout_rub)}</td></tr>`).join('') || '<tr><td colspan="5">Нет данных</td></tr>'}
+    </tbody></table>`;
+  document.getElementById('guideJobs').innerHTML = jobs.length
+    ? `<table><thead><tr><th>Дата</th><th>Инструктор</th><th>Услуга</th><th class="num">Кол-во</th><th class="num">Выплата</th>${me?.is_manager ? '<th></th>' : ''}</tr></thead><tbody>${
+      jobs.map((j) => `<tr><td>${j.occurred_on}</td><td>${escapeHtml(j.instructor_name)}</td><td>${escapeHtml(j.service_name)}</td><td class="num">${j.quantity}</td><td class="num">${fmtRub(j.payout_rub_total)}</td>${me?.is_manager ? `<td><button type="button" class="btn danger" data-del-job="${j.id}">×</button></td>` : ''}</tr>`).join('')
+    }</tbody></table>`
+    : '';
+  document.querySelectorAll('[data-del-job]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Удалить запись?')) return;
+      await api(`/api/guide-jobs/${btn.dataset.delJob}`, { method: 'DELETE' });
+      await loadGuideReport();
+    });
+  });
+}
+
 async function loadUsers() {
-  if (me?.role !== 'admin' && me?.id !== 0) return;
+  if (!me?.is_admin && me?.id !== 0) return;
   const rows = await api('/api/users');
   if (!rows.length) {
     document.getElementById('usersTable').innerHTML = '<p class="hint">Пока никого нет.</p>';
     return;
   }
+  const roleLabel = {
+    staff: 'Сотрудник',
+    instructor: 'Инструктор',
+    manager: 'Управляющий',
+    admin: 'Администратор',
+    owner: 'Владелец',
+  };
   const roleOpts = (current) =>
-    ['staff', 'manager', 'admin']
-      .map((r) => `<option value="${r}" ${r === current ? 'selected' : ''}>${r === 'staff' ? 'Сотрудник' : r === 'manager' ? 'Управляющий' : 'Администратор'}</option>`)
+    Object.entries(roleLabel)
+      .map(([r, label]) => `<option value="${r}" ${r === current ? 'selected' : ''}>${label}</option>`)
       .join('');
   let html = `<table><thead><tr>
     <th>Email</th><th>Имя</th><th>Роль</th><th>Сотрудник</th><th>Доступ</th>
@@ -532,11 +599,11 @@ function applySeasonDates() {
   const y = new Date().getFullYear();
   const s = seasonRange(y);
   const to = seasonToDate(y);
-  for (const id of ['dashFrom', 'txFilterFrom', 'salesFilterFrom', 'payFrom', 'whFilterFrom']) {
+  for (const id of ['dashFrom', 'txFilterFrom', 'salesFilterFrom', 'payFrom', 'whFilterFrom', 'guideFrom']) {
     const el = document.getElementById(id);
     if (el) el.value = s.from;
   }
-  for (const id of ['dashTo', 'txFilterTo', 'salesFilterTo', 'payTo', 'whFilterTo']) {
+  for (const id of ['dashTo', 'txFilterTo', 'salesFilterTo', 'payTo', 'whFilterTo', 'guideTo']) {
     const el = document.getElementById(id);
     if (el) el.value = to;
   }
@@ -812,6 +879,16 @@ function bindForms() {
     const fd = new FormData(ev.target);
     const role = fd.get('role');
     const body = { name: fd.get('name'), role, email: fd.get('email') };
+    if (fd.get('employee_id')) body.employee_id = Number(fd.get('employee_id'));
+    if (role === 'instructor') {
+      const iid = fd.get('instructor_id');
+      if (!iid) {
+        err.textContent = 'Выберите карточку инструктора';
+        err.hidden = false;
+        return;
+      }
+      body.instructor_id = Number(iid);
+    }
     if (role === 'staff') {
       const eid = fd.get('employee_id');
       if (!eid) {
@@ -851,6 +928,68 @@ function bindForms() {
     loadWarehouseMovements();
   });
   document.getElementById('payCalc')?.addEventListener('click', calcPayroll);
+  document.getElementById('guideJobForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('guideJobError');
+    err.hidden = true;
+    const fd = new FormData(ev.target);
+    const body = {
+      service_id: Number(fd.get('service_id')),
+      occurred_on: fd.get('occurred_on'),
+      quantity: Number(fd.get('quantity')),
+      tourists: Number(fd.get('tourists')) || 1,
+      note: fd.get('note'),
+    };
+    if (me?.is_manager && fd.get('instructor_id')) body.instructor_id = Number(fd.get('instructor_id'));
+    try {
+      await api('/api/guide-jobs', { method: 'POST', body: JSON.stringify(body) });
+      await loadGuideReport();
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    }
+  });
+  document.getElementById('guideServiceForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+    try {
+      await api('/api/guide-services', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: fd.get('name'),
+          price_rub: Number(fd.get('price_rub')),
+          payout_rub: Number(fd.get('payout_rub')),
+        }),
+      });
+      ev.target.reset();
+      await loadGuides();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+  document.getElementById('instructorForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+    try {
+      await api('/api/instructors', {
+        method: 'POST',
+        body: JSON.stringify({ name: fd.get('name'), note: fd.get('note') }),
+      });
+      ev.target.reset();
+      await loadGuides();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+  document.getElementById('guideCalc')?.addEventListener('click', () => loadGuideReport().catch((e) => alert(e.message)));
+  document.getElementById('guideSeason')?.addEventListener('click', () => {
+    const y = new Date().getFullYear();
+    const s = seasonRange(y);
+    document.getElementById('guideFrom').value = s.from;
+    document.getElementById('guideTo').value = seasonToDate(y);
+    loadGuideReport().catch((e) => alert(e.message));
+  });
+
   document.getElementById('paySeason')?.addEventListener('click', () => {
     const y = new Date().getFullYear();
     const s = seasonRange(y);
@@ -873,6 +1012,8 @@ async function bootstrap() {
     (document.querySelector('#whIssueForm [name=occurred_on]').value = todayIso());
   document.querySelector('#whReceiptForm [name=occurred_on]') &&
     (document.querySelector('#whReceiptForm [name=occurred_on]').value = todayIso());
+  document.querySelector('#guideJobForm [name=occurred_on]') &&
+    (document.querySelector('#guideJobForm [name=occurred_on]').value = todayIso());
 
   await refreshDashboard();
   if (me?.is_manager) await loadTxJournal();
@@ -880,8 +1021,14 @@ async function bootstrap() {
   await loadWarehouseItems();
   await loadWarehouseMovements();
   await loadEmployees();
+  if (me?.is_manager || me?.role === 'instructor') {
+    await loadGuides();
+    await loadGuideReport();
+  }
   await loadUsers();
-  if (me?.role === 'staff') {
+  if (me?.role === 'instructor') {
+    document.querySelector('nav.tabs button[data-tab="guides"]')?.click();
+  } else if (me?.role === 'staff') {
     document.querySelector('nav.tabs button[data-tab="sales"]')?.click();
   }
 }

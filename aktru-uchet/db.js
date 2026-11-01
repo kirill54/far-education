@@ -136,6 +136,124 @@ function migrate(db) {
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL`,
   );
   seedWarehouseItems(db);
+  widenUserRoles(db);
+  ensureColumn(db, 'users', 'instructor_id', 'INTEGER');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS instructors (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      note TEXT NOT NULL DEFAULT '',
+      active INTEGER NOT NULL DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS guide_services (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      price_rub REAL NOT NULL CHECK (price_rub >= 0),
+      payout_rub REAL NOT NULL CHECK (payout_rub >= 0),
+      active INTEGER NOT NULL DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS guide_jobs (
+      id INTEGER PRIMARY KEY,
+      instructor_id INTEGER NOT NULL REFERENCES instructors(id),
+      service_id INTEGER NOT NULL REFERENCES guide_services(id),
+      occurred_on TEXT NOT NULL,
+      quantity REAL NOT NULL CHECK (quantity > 0),
+      tourists INTEGER NOT NULL DEFAULT 1,
+      note TEXT NOT NULL DEFAULT '',
+      created_by_user_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_guide_jobs_date ON guide_jobs(occurred_on);
+  `);
+  seedGuideServices(db);
+  seedRoster(db);
+}
+
+function widenUserRoles(db) {
+  const row = db.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`).get();
+  if (!row || String(row.sql).includes("'owner'")) return;
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    CREATE TABLE users_new (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'manager', 'staff', 'instructor')),
+      token_hash TEXT NOT NULL UNIQUE,
+      employee_id INTEGER REFERENCES employees(id),
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      email TEXT,
+      instructor_id INTEGER
+    );
+    INSERT INTO users_new (id, name, role, token_hash, employee_id, active, created_at, email)
+      SELECT id, name, role, token_hash, employee_id, active, created_at, email FROM users;
+    DROP TABLE users;
+    ALTER TABLE users_new RENAME TO users;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
+  `);
+  db.pragma('foreign_keys = ON');
+}
+
+function seedGuideServices(db) {
+  const count = db.prepare('SELECT COUNT(*) AS c FROM guide_services').get().c;
+  if (count > 0) return;
+  const ins = db.prepare(
+    `INSERT INTO guide_services (name, price_rub, payout_rub) VALUES (?, ?, ?)`,
+  );
+  for (const row of [
+    ['Радиалка', 3000, 1500],
+    ['Выход на ледник', 4500, 2200],
+    ['Восхождение с инструктором', 9000, 4500],
+    ['Сопровождение группы', 6000, 3000],
+  ]) {
+    ins.run(...row);
+  }
+}
+
+function seedRoster(db) {
+  const cafe = db.prepare(`SELECT id FROM units WHERE slug = 'cafe'`).get()?.id;
+  const bath = db.prepare(`SELECT id FROM units WHERE slug = 'bath'`).get()?.id;
+  if (!cafe || !bath) return;
+
+  function employeeId(name, unitId, role) {
+    const existing = db.prepare('SELECT id FROM employees WHERE name = ?').get(name);
+    if (existing) {
+      db.prepare('UPDATE employees SET unit_id = ?, role = ?, active = 1 WHERE id = ?').run(unitId, role, existing.id);
+      return existing.id;
+    }
+    const info = db.prepare(
+      `INSERT INTO employees (unit_id, name, role, monthly_base_rub, turnover_bonus_pct)
+       VALUES (?, ?, ?, 0, 0)`,
+    ).run(unitId, name, role);
+    return info.lastInsertRowid;
+  }
+
+  const ivanov = employeeId('Александр Иванов', cafe, 'Кафе');
+  const yulia = employeeId('Юлия', cafe, 'Кафе');
+  const astahovA = employeeId('Александр Астахов', bath, 'Баня и склад');
+
+  function user({ email, name, role, employeeId: emp, instructorId }) {
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing) {
+      db.prepare(
+        `UPDATE users SET name = ?, role = ?, employee_id = ?, instructor_id = ?, active = 1 WHERE id = ?`,
+      ).run(name, role, emp || null, instructorId || null, existing.id);
+      return;
+    }
+    db.prepare(
+      `INSERT INTO users (name, role, token_hash, employee_id, instructor_id, email, active)
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+    ).run(name, role, `seed-${email}`, emp || null, instructorId || null, email);
+  }
+
+  user({ email: 'a.ivanov@aktru.local', name: 'Александр Иванов', role: 'staff', employeeId: ivanov });
+  user({ email: 'yulia@aktru.local', name: 'Юлия', role: 'staff', employeeId: yulia });
+  user({ email: 'a.astahov@aktru.local', name: 'Александр Астахов', role: 'admin', employeeId: astahovA });
+  user({ email: 's.astahov@aktru.local', name: 'Сергей Астахов', role: 'admin' });
+  user({ email: 'k.yurkin@aktru.local', name: 'Кирилл Юркин', role: 'owner' });
 }
 
 function ensureColumn(db, table, column, ddl) {

@@ -48,6 +48,7 @@
       <button type="button" data-tab="warehouse" data-roles="admin,manager,staff">Склад</button>
       <button type="button" data-tab="operations" data-roles="admin,manager">Операции</button>
       <button type="button" data-tab="payroll" data-roles="admin,manager,staff">Зарплаты</button>
+      <button type="button" data-tab="guides" data-roles="admin,manager,instructor">Инструкторы</button>
       <button type="button" data-tab="staff" data-roles="admin,manager">Сотрудники</button>
       <button type="button" data-tab="users" data-roles="admin">Доступ</button>
     </nav>
@@ -228,10 +229,79 @@
       </div>
     </section>
 
+    <section id="panel-guides" class="panel" data-roles="admin,manager,instructor">
+      <div class="box">
+        <h2>Услуги инструкторов</h2>
+        <p class="hint">Цена — сколько платит турист за одну услугу. Выплата — сколько получает инструктор за одну услугу. Суммы ниже — черновик, их можно поменять.</p>
+        <div id="guideServices"></div>
+        <form id="guideServiceForm" class="row" data-roles="admin,manager">
+          <label>Новая услуга
+            <input name="name" required placeholder="Например, ледовое занятие">
+          </label>
+          <label>Цена для туриста, ₽
+            <input type="number" name="price_rub" min="0" step="100" required>
+          </label>
+          <label>Выплата инструктору, ₽
+            <input type="number" name="payout_rub" min="0" step="100" required>
+          </label>
+          <button type="submit" class="btn secondary">Добавить услугу</button>
+        </form>
+      </div>
+      <div class="box">
+        <h2>Оказанная услуга</h2>
+        <form id="guideJobForm" class="row">
+          <label id="guideInstructorLabel" data-roles="admin,manager">Инструктор
+            <select name="instructor_id" id="guideInstructor"></select>
+          </label>
+          <label>Услуга
+            <select name="service_id" id="guideService" required></select>
+          </label>
+          <label>Дата
+            <input type="date" name="occurred_on" required>
+          </label>
+          <label>Количество услуг
+            <input type="number" name="quantity" min="1" step="1" value="1" required>
+          </label>
+          <label>Туристов
+            <input type="number" name="tourists" min="1" step="1" value="1">
+          </label>
+          <label style="grid-column:1 / -1">Комментарий
+            <input name="note" placeholder="Группа, маршрут">
+          </label>
+          <button type="submit" class="btn">Записать</button>
+        </form>
+        <p class="error" id="guideJobError" hidden></p>
+      </div>
+      <div class="box">
+        <h2>Выплаты за период</h2>
+        <div class="filters">
+          <label>С <input type="date" id="guideFrom"></label>
+          <label>По <input type="date" id="guideTo"></label>
+          <button type="button" class="btn secondary" id="guideSeason">Летний сезон</button>
+          <button type="button" class="btn" id="guideCalc">Показать</button>
+        </div>
+        <div id="guidePayout"></div>
+        <div id="guideJobs"></div>
+      </div>
+      <div class="box" data-roles="admin,manager">
+        <h2>Новый инструктор</h2>
+        <form id="instructorForm" class="row">
+          <label>Имя
+            <input name="name" required>
+          </label>
+          <label>Заметка
+            <input name="note" placeholder="Телефон, специализация">
+          </label>
+          <button type="submit" class="btn">Добавить</button>
+        </form>
+        <p class="hint">Чтобы инструктор входил сам, на вкладке «Доступ» создайте учётную запись с ролью «Инструктор» и этим email.</p>
+      </div>
+    </section>
+
     <section id="panel-users" class="panel" data-roles="admin">
       <div class="box">
         <h2>Добавить email в доступ</h2>
-        <p class="hint"><strong>Сотрудник</strong> — продажи и склад. <strong>Управляющий</strong> — цифры базы и операции. <strong>Администратор</strong> — ещё и список email и роли.</p>
+        <p class="hint"><strong>Владелец</strong> и <strong>администратор</strong> видят всю базу и выдают доступ. <strong>Сотрудник</strong> — продажи и склад. <strong>Инструктор</strong> — свои услуги и выплату.</p>
         <form id="userForm" class="row">
           <label>Email
             <input type="email" name="email" required placeholder="имя@почта.ru">
@@ -242,12 +312,19 @@
           <label>Роль
             <select name="role" id="userRole">
               <option value="staff">Сотрудник</option>
+              <option value="instructor">Инструктор</option>
               <option value="manager">Управляющий</option>
               <option value="admin">Администратор</option>
+              <option value="owner">Владелец</option>
             </select>
           </label>
-          <label id="userEmpLabel">Карточка сотрудника (для роли «сотрудник»)
+          <label id="userEmpLabel">Карточка сотрудника
             <select name="employee_id" id="userEmployee">
+              <option value="">—</option>
+            </select>
+          </label>
+          <label id="userGuideLabel">Карточка инструктора
+            <select name="instructor_id" id="userInstructor">
               <option value="">—</option>
             </select>
           </label>

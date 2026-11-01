@@ -7,6 +7,7 @@ import {
   createSession,
   generateToken,
   hashToken,
+  isAdmin,
   isManager,
   normalizeEmail,
   readSessionCookie,
@@ -165,7 +166,9 @@ app.get('/api/me', requireAuth, (req, res) => {
     name: req.user.name,
     role: req.user.role,
     employee_id: req.user.employee_id,
+    instructor_id: req.user.instructor_id || null,
     is_manager: isManager(req.user),
+    is_admin: isAdmin(req.user),
   };
   if (req.user.employee_id) {
     const emp = db
@@ -617,13 +620,16 @@ app.patch('/api/employees/:id', requireAuth, requireManager, (req, res) => {
 });
 
 app.get('/api/users', requireAuth, (req, res) => {
-  if (req.user.role !== 'admin' && !(req.user.id === 0)) {
+  if (!isAdmin(req.user)) {
     return res.status(403).json({ error: 'Только администратор' });
   }
   const rows = db
     .prepare(
-      `SELECT u.id, u.name, u.role, u.email, u.employee_id, e.name AS employee_name, u.active, u.created_at
-       FROM users u LEFT JOIN employees e ON e.id = u.employee_id
+      `SELECT u.id, u.name, u.role, u.email, u.employee_id, e.name AS employee_name,
+              u.instructor_id, i.name AS instructor_name, u.active, u.created_at
+       FROM users u
+       LEFT JOIN employees e ON e.id = u.employee_id
+       LEFT JOIN instructors i ON i.id = u.instructor_id
        ORDER BY u.id`,
     )
     .all();
@@ -631,30 +637,34 @@ app.get('/api/users', requireAuth, (req, res) => {
 });
 
 app.post('/api/users', requireAuth, (req, res) => {
-  if (req.user.role !== 'admin' && !(req.user.id === 0)) {
+  if (!isAdmin(req.user)) {
     return res.status(403).json({ error: 'Только администратор' });
   }
-  const { name, role, employee_id, email } = req.body || {};
+  const { name, role, employee_id, instructor_id, email } = req.body || {};
   const normalized = normalizeEmail(email);
   if (!name || !role || !normalized) {
     return res.status(400).json({ error: 'Нужны name, email и role' });
   }
-  if (!['admin', 'manager', 'staff'].includes(role)) {
-    return res.status(400).json({ error: 'role: admin | manager | staff' });
+  if (!['owner', 'admin', 'manager', 'staff', 'instructor'].includes(role)) {
+    return res.status(400).json({ error: 'Неизвестная роль' });
   }
   if (role === 'staff' && !employee_id) {
     return res.status(400).json({ error: 'Для сотрудника укажите карточку в справочнике' });
   }
+  if (role === 'instructor' && !instructor_id) {
+    return res.status(400).json({ error: 'Для инструктора выберите карточку инструктора' });
+  }
   try {
     const info = db
       .prepare(
-        `INSERT INTO users (name, role, token_hash, employee_id, email) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO users (name, role, token_hash, employee_id, instructor_id, email) VALUES (?, ?, ?, ?, ?, ?)`,
       )
       .run(
         name.trim(),
         role,
         hashToken(generateToken()),
         employee_id ? Number(employee_id) : null,
+        instructor_id ? Number(instructor_id) : null,
         normalized,
       );
     res.status(201).json({
@@ -670,21 +680,22 @@ app.post('/api/users', requireAuth, (req, res) => {
 });
 
 app.patch('/api/users/:id', requireAuth, (req, res) => {
-  if (req.user.role !== 'admin' && !(req.user.id === 0)) {
+  if (!isAdmin(req.user)) {
     return res.status(403).json({ error: 'Только администратор' });
   }
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Не найдено' });
-  const { active, name, role, employee_id, email } = req.body || {};
+  const { active, name, role, employee_id, instructor_id, email } = req.body || {};
   const nextEmail = email !== undefined ? normalizeEmail(email) : existing.email;
   try {
     db.prepare(
-      `UPDATE users SET name = ?, role = ?, employee_id = ?, active = ?, email = ? WHERE id = ?`,
+      `UPDATE users SET name = ?, role = ?, employee_id = ?, instructor_id = ?, active = ?, email = ? WHERE id = ?`,
     ).run(
       name !== undefined ? String(name).trim() : existing.name,
       role !== undefined ? role : existing.role,
       employee_id !== undefined ? (employee_id ? Number(employee_id) : null) : existing.employee_id,
+      instructor_id !== undefined ? (instructor_id ? Number(instructor_id) : null) : existing.instructor_id,
       active !== undefined ? (active ? 1 : 0) : existing.active,
       nextEmail,
       id,
@@ -965,6 +976,174 @@ app.delete('/api/warehouse/movements/:id', requireAuth, requireManager, (req, re
   const info = db.prepare('DELETE FROM warehouse_movements WHERE id = ?').run(id);
   if (info.changes === 0) return res.status(404).json({ error: 'Не найдено' });
   res.json({ ok: true });
+});
+
+app.get('/api/instructors', requireAuth, (req, res) => {
+  if (req.user.role === 'instructor') {
+    const one = db.prepare('SELECT * FROM instructors WHERE id = ?').get(req.user.instructor_id);
+    return res.json(one ? [one] : []);
+  }
+  if (!isManager(req.user)) return res.status(403).json({ error: 'Недостаточно прав' });
+  res.json(db.prepare('SELECT * FROM instructors WHERE active = 1 ORDER BY name').all());
+});
+
+app.post('/api/instructors', requireAuth, requireManager, (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Нужно имя' });
+  try {
+    const info = db.prepare(
+      `INSERT INTO instructors (name, note) VALUES (?, ?)`,
+    ).run(name, String(req.body?.note || '').trim());
+    res.status(201).json({ id: info.lastInsertRowid });
+  } catch {
+    res.status(409).json({ error: 'Такой инструктор уже есть' });
+  }
+});
+
+app.get('/api/guide-services', requireAuth, (_req, res) => {
+  res.json(db.prepare(
+    `SELECT * FROM guide_services WHERE active = 1 ORDER BY name`,
+  ).all());
+});
+
+app.post('/api/guide-services', requireAuth, requireManager, (req, res) => {
+  const { name, price_rub, payout_rub } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'Нужно название услуги' });
+  const price = Number(price_rub);
+  const payout = Number(payout_rub);
+  if (!Number.isFinite(price) || price < 0 || !Number.isFinite(payout) || payout < 0) {
+    return res.status(400).json({ error: 'Укажите цену и выплату инструктору' });
+  }
+  try {
+    const info = db.prepare(
+      `INSERT INTO guide_services (name, price_rub, payout_rub) VALUES (?, ?, ?)`,
+    ).run(String(name).trim(), price, payout);
+    res.status(201).json({ id: info.lastInsertRowid });
+  } catch {
+    res.status(409).json({ error: 'Такая услуга уже есть' });
+  }
+});
+
+app.patch('/api/guide-services/:id', requireAuth, requireManager, (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM guide_services WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Не найдено' });
+  const body = req.body || {};
+  db.prepare(
+    `UPDATE guide_services SET name = ?, price_rub = ?, payout_rub = ?, active = ? WHERE id = ?`,
+  ).run(
+    body.name !== undefined ? String(body.name).trim() : existing.name,
+    body.price_rub !== undefined ? Number(body.price_rub) : existing.price_rub,
+    body.payout_rub !== undefined ? Number(body.payout_rub) : existing.payout_rub,
+    body.active !== undefined ? (body.active ? 1 : 0) : existing.active,
+    id,
+  );
+  res.json({ ok: true });
+});
+
+app.get('/api/guide-jobs', requireAuth, (req, res) => {
+  const clauses = [];
+  const params = [];
+  if (req.user.role === 'instructor') {
+    if (!req.user.instructor_id) return res.json([]);
+    clauses.push('j.instructor_id = ?');
+    params.push(req.user.instructor_id);
+  } else if (!isManager(req.user)) {
+    return res.status(403).json({ error: 'Недостаточно прав' });
+  } else if (req.query.instructor_id) {
+    clauses.push('j.instructor_id = ?');
+    params.push(Number(req.query.instructor_id));
+  }
+  if (req.query.from) {
+    clauses.push('j.occurred_on >= ?');
+    params.push(req.query.from);
+  }
+  if (req.query.to) {
+    clauses.push('j.occurred_on <= ?');
+    params.push(req.query.to);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const rows = db.prepare(
+    `SELECT j.id, j.occurred_on, j.quantity, j.tourists, j.note,
+            i.name AS instructor_name, j.instructor_id,
+            s.name AS service_name, s.price_rub, s.payout_rub,
+            (j.quantity * s.price_rub) AS revenue_rub,
+            (j.quantity * s.payout_rub) AS payout_rub_total
+     FROM guide_jobs j
+     JOIN instructors i ON i.id = j.instructor_id
+     JOIN guide_services s ON s.id = j.service_id
+     ${where}
+     ORDER BY j.occurred_on DESC, j.id DESC
+     LIMIT 500`,
+  ).all(...params);
+  res.json(rows);
+});
+
+app.post('/api/guide-jobs', requireAuth, (req, res) => {
+  const body = req.body || {};
+  let instructorId = body.instructor_id ? Number(body.instructor_id) : null;
+  if (req.user.role === 'instructor') {
+    instructorId = req.user.instructor_id;
+  } else if (!isManager(req.user)) {
+    return res.status(403).json({ error: 'Недостаточно прав' });
+  }
+  const serviceId = Number(body.service_id);
+  const quantity = Number(body.quantity);
+  if (!instructorId || !serviceId || !body.occurred_on || !Number.isFinite(quantity) || quantity <= 0) {
+    return res.status(400).json({ error: 'Нужны инструктор, услуга, дата и количество' });
+  }
+  const info = db.prepare(
+    `INSERT INTO guide_jobs (instructor_id, service_id, occurred_on, quantity, tourists, note, created_by_user_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    instructorId,
+    serviceId,
+    body.occurred_on,
+    quantity,
+    Number(body.tourists) || 1,
+    String(body.note || '').trim(),
+    req.user.id > 0 ? req.user.id : null,
+  );
+  res.status(201).json({ id: info.lastInsertRowid });
+});
+
+app.delete('/api/guide-jobs/:id', requireAuth, requireManager, (req, res) => {
+  const info = db.prepare('DELETE FROM guide_jobs WHERE id = ?').run(Number(req.params.id));
+  if (!info.changes) return res.status(404).json({ error: 'Не найдено' });
+  res.json({ ok: true });
+});
+
+app.get('/api/guide-payout', requireAuth, (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'Нужны from и to' });
+  if (req.user.role === 'instructor' && !req.user.instructor_id) {
+    return res.status(403).json({ error: 'Нет карточки инструктора' });
+  }
+  if (req.user.role !== 'instructor' && !isManager(req.user)) {
+    return res.status(403).json({ error: 'Недостаточно прав' });
+  }
+  const onlyId = req.user.role === 'instructor';
+  const list = db.prepare(
+    `SELECT i.id AS instructor_id, i.name,
+            COALESCE(SUM(j.quantity), 0) AS quantity,
+            COALESCE(SUM(j.tourists), 0) AS tourists,
+            COALESCE(SUM(j.quantity * s.price_rub), 0) AS revenue_rub,
+            COALESCE(SUM(j.quantity * s.payout_rub), 0) AS payout_rub
+     FROM instructors i
+     LEFT JOIN guide_jobs j ON j.instructor_id = i.id AND j.occurred_on >= ? AND j.occurred_on <= ?
+     LEFT JOIN guide_services s ON s.id = j.service_id
+     WHERE ${onlyId ? 'i.id = ?' : 'i.active = 1'}
+     GROUP BY i.id
+     ORDER BY payout_rub DESC, i.name`,
+  ).all(...(onlyId ? [from, to, req.user.instructor_id] : [from, to]));
+  const totals = list.reduce(
+    (acc, row) => ({
+      revenue_rub: acc.revenue_rub + row.revenue_rub,
+      payout_rub: acc.payout_rub + row.payout_rub,
+    }),
+    { revenue_rub: 0, payout_rub: 0 },
+  );
+  res.json({ from, to, instructors: list, totals });
 });
 
 app.use(express.static(path.join(__dirname, 'public')));

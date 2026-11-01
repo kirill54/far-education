@@ -16,7 +16,7 @@ export function resolveSession(db, token) {
   if (!token) return null;
   const row = db
     .prepare(
-      `SELECT u.id, u.name, u.role, u.employee_id, u.email, s.expires_at
+      `SELECT u.id, u.name, u.role, u.employee_id, u.instructor_id, u.email, s.expires_at
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.token_hash = ? AND u.active = 1`,
@@ -38,13 +38,14 @@ export function resolveUser(db, bearerToken, envAdminToken) {
       name: 'Администратор (env)',
       role: 'admin',
       employee_id: null,
+      instructor_id: null,
       email: null,
     };
   }
   const hash = hashToken(bearerToken);
   const row = db
     .prepare(
-      `SELECT id, name, role, employee_id, email FROM users
+      `SELECT id, name, role, employee_id, instructor_id, email FROM users
        WHERE token_hash = ? AND active = 1`,
     )
     .get(hash);
@@ -72,6 +73,10 @@ export function readSessionCookie(req) {
   return match ? decodeURIComponent(match[1]) : '';
 }
 
+export function isAdmin(user) {
+  return user && (user.role === 'admin' || user.role === 'owner' || user.id === 0);
+}
+
 export function isManager(user) {
-  return user && (user.role === 'admin' || user.role === 'manager');
+  return user && (user.role === 'owner' || user.role === 'admin' || user.role === 'manager');
 }
