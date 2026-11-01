@@ -672,6 +672,8 @@ function bindForms() {
     const submit = ev.target.querySelector('button[type="submit"]');
     err.hidden = true;
     submit.disabled = true;
+    const prevLabel = submit.textContent;
+    submit.textContent = 'Входим…';
     try {
       await api('/api/auth/verify', {
         method: 'POST',
@@ -682,8 +684,10 @@ function bindForms() {
       });
       await bootstrap();
     } catch (e) {
-      err.textContent = e.message;
+      showLogin();
+      err.textContent = e.message || 'Не удалось войти';
       err.hidden = false;
+      submit.textContent = prevLabel;
     } finally {
       submit.disabled = false;
     }
