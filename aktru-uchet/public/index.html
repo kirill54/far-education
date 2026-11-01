@@ -7,16 +7,38 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="wrap">
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <p class="eyebrow">База Актру</p>
+      <h1>Вход</h1>
+      <p class="sub">Укажите рабочий email из списка доступа. На почту придёт код — по нему откроется учёт.</p>
+      <form id="emailForm">
+        <label>Email
+          <input type="email" name="email" id="loginEmail" required autocomplete="username" placeholder="имя@aktru.ru">
+        </label>
+        <button type="submit" class="btn" id="sendCodeBtn">Получить код</button>
+      </form>
+      <form id="codeForm" hidden>
+        <label>Код из письма
+          <input type="text" name="code" id="loginCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="6 цифр">
+        </label>
+        <button type="submit" class="btn">Войти</button>
+        <button type="button" class="btn secondary" id="backToEmail">Другой email</button>
+      </form>
+      <p class="error" id="loginError" hidden></p>
+      <p class="hint" id="loginHint"></p>
+    </div>
+  </div>
+
+  <div class="wrap" id="appRoot" hidden>
     <header>
       <div>
         <h1>База Актру — учёт</h1>
-        <p class="sub">Летний сезон: учёт базы, продажи для премий и списания со склада — каждый вносит своё; оклад и % премии задаёт руководство.</p>
+        <p class="sub">Летний сезон: цифры базы, продажи для премий и склад. Доступ — только по email из списка администратора.</p>
       </div>
       <div class="token-box">
-        <span id="userBadge" class="user-badge" hidden></span>
-        <input type="password" id="tokenInput" placeholder="Ваш токен" autocomplete="off">
-        <button type="button" id="saveToken">Войти</button>
+        <span id="userBadge" class="user-badge"></span>
+        <button type="button" class="btn secondary" id="logoutBtn">Выйти</button>
       </div>
     </header>
 
@@ -41,7 +63,19 @@
         <button type="button" class="btn secondary" id="dashApply">Применить</button>
         <button type="button" class="btn secondary" id="dashSeason">Летний сезон</button>
       </div>
-      <div id="balanceCards" class="grid-cards"></div>
+      <div id="kpiRow" class="kpi-row"></div>
+      <div class="dash-split">
+        <div class="box">
+          <h2>По подразделениям</h2>
+          <div id="balanceCards" class="grid-cards"></div>
+        </div>
+        <div class="box">
+          <h2>За период ещё</h2>
+          <div id="dashExtra"></div>
+          <h2 style="margin-top:18px">Склад: ниже минимума</h2>
+          <div id="dashLowStock"></div>
+        </div>
+      </div>
       <div class="box">
         <h2>Последние операции</h2>
         <div id="recentTx"></div>
@@ -86,82 +120,16 @@
     </section>
 
     <section id="panel-warehouse" class="panel" data-roles="admin,manager,staff">
-      <div class="box">
-        <h2>Списание со склада</h2>
-        <p class="hint">Взяли товар — сразу оформите списание: так видно остатки и кто что забрал. Приход на склад вносит управляющий.</p>
-        <form id="whIssueForm" class="row">
-          <label>Позиция
-            <select name="item_id" id="whIssueItem" required></select>
-          </label>
-          <label>Количество
-            <input type="number" name="quantity" min="0.001" step="any" required>
-          </label>
-          <label>Дата
-            <input type="date" name="occurred_on" required>
-          </label>
-          <label>Куда / для чего
-            <input name="destination" placeholder="Кафе, баня, столовая…" required>
-          </label>
-          <label id="whIssueEmpLabel" hidden>Забрал (сотрудник)
-            <select name="employee_id" id="whIssueEmployee"></select>
-          </label>
-          <label style="grid-column: 1 / -1">Комментарий
-            <textarea name="note" placeholder="Необязательно"></textarea>
-          </label>
-          <button type="submit" class="btn">Списать</button>
-        </form>
-        <p class="error" id="whIssueError" hidden></p>
-      </div>
-      <div class="box" data-roles="admin,manager" id="whReceiptBox">
-        <h2>Приход на склад</h2>
-        <form id="whReceiptForm" class="row">
-          <label>Позиция
-            <select name="item_id" id="whReceiptItem" required></select>
-          </label>
-          <label>Количество
-            <input type="number" name="quantity" min="0.001" step="any" required>
-          </label>
-          <label>Дата
-            <input type="date" name="occurred_on" required>
-          </label>
-          <label style="grid-column: 1 / -1">Комментарий
-            <textarea name="note" placeholder="Поставка, накладная…"></textarea>
-          </label>
-          <button type="submit" class="btn">Оприходовать</button>
-        </form>
-        <p class="error" id="whReceiptError" hidden></p>
-      </div>
-      <div class="box" data-roles="admin,manager" id="whItemBox">
-        <h2>Новая позиция номенклатуры</h2>
-        <form id="whItemForm" class="row">
-          <label>Название
-            <input name="name" required>
-          </label>
-          <label>Ед. изм.
-            <input name="unit_label" value="шт">
-          </label>
-          <label>Мин. остаток (оповещение)
-            <input type="number" name="min_stock" min="0" step="any" value="0">
-          </label>
-          <button type="submit" class="btn secondary">Добавить</button>
-        </form>
+      <div class="filters">
+        <button type="button" class="btn" id="openIssue">Списание</button>
+        <button type="button" class="btn" id="openReceipt" data-roles="admin,manager">Приход</button>
+        <button type="button" class="btn secondary" id="openItem" data-roles="admin,manager">Новая позиция</button>
+        <button type="button" class="btn secondary" id="openJournal">Журнал</button>
       </div>
       <div class="box">
-        <h2>Остатки</h2>
+        <h2>Текущие остатки</h2>
+        <p class="hint">Сначала остатки. Списание, приход и журнал открываются отдельными окнами.</p>
         <div id="whStockTable"></div>
-      </div>
-      <div class="box">
-        <h2>Журнал движений</h2>
-        <div class="filters">
-          <label>С
-            <input type="date" id="whFilterFrom">
-          </label>
-          <label>По
-            <input type="date" id="whFilterTo">
-          </label>
-          <button type="button" class="btn secondary" id="whRefresh">Обновить</button>
-        </div>
-        <div id="whMoveTable"></div>
       </div>
     </section>
 
@@ -262,27 +230,29 @@
 
     <section id="panel-users" class="panel" data-roles="admin">
       <div class="box">
-        <h2>Новый пользователь</h2>
-        <p class="hint">У каждого свой токен. <strong>staff</strong> — только свои продажи; <strong>manager</strong> — вся база; <strong>admin</strong> — ещё и выдача доступов.</p>
+        <h2>Добавить email в доступ</h2>
+        <p class="hint"><strong>Сотрудник</strong> — продажи и склад. <strong>Управляющий</strong> — цифры базы и операции. <strong>Администратор</strong> — ещё и список email и роли.</p>
         <form id="userForm" class="row">
-          <label>Имя / подпись
-            <input name="name" required placeholder="Как в списке">
+          <label>Email
+            <input type="email" name="email" required placeholder="имя@почта.ru">
+          </label>
+          <label>Имя
+            <input name="name" required>
           </label>
           <label>Роль
             <select name="role" id="userRole">
-              <option value="staff">Сотрудник (staff)</option>
-              <option value="manager">Управляющий (manager)</option>
-              <option value="admin">Администратор (admin)</option>
+              <option value="staff">Сотрудник</option>
+              <option value="manager">Управляющий</option>
+              <option value="admin">Администратор</option>
             </select>
           </label>
-          <label id="userEmpLabel">Привязка к сотруднику (для staff)
+          <label id="userEmpLabel">Карточка сотрудника (для роли «сотрудник»)
             <select name="employee_id" id="userEmployee">
               <option value="">—</option>
             </select>
           </label>
-          <button type="submit" class="btn">Создать и показать токен</button>
+          <button type="submit" class="btn">Добавить</button>
         </form>
-        <pre id="newUserToken" class="token-reveal" hidden></pre>
         <p class="error" id="userError" hidden></p>
       </div>
       <div class="box">
@@ -290,6 +260,83 @@
         <div id="usersTable"></div>
       </div>
     </section>
+  </div>
+
+  <div id="modalIssue" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-labelledby="issueTitle">
+      <div class="modal-head"><h2 id="issueTitle">Списание</h2><button type="button" class="btn secondary" data-close="modalIssue">Закрыть</button></div>
+      <form id="whIssueForm" class="row">
+        <label>Позиция
+          <select name="item_id" id="whIssueItem" required></select>
+        </label>
+        <label>Количество
+          <input type="number" name="quantity" min="0.001" step="any" required>
+        </label>
+        <label>Дата
+          <input type="date" name="occurred_on" required>
+        </label>
+        <label>Куда / для чего
+          <input name="destination" placeholder="Кафе, баня, столовая…" required>
+        </label>
+        <label id="whIssueEmpLabel" hidden>Забрал
+          <select name="employee_id" id="whIssueEmployee"></select>
+        </label>
+        <label style="grid-column: 1 / -1">Комментарий
+          <textarea name="note"></textarea>
+        </label>
+        <button type="submit" class="btn">Списать</button>
+      </form>
+      <p class="error" id="whIssueError" hidden></p>
+    </div>
+  </div>
+  <div id="modalReceipt" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <div class="modal-head"><h2>Приход</h2><button type="button" class="btn secondary" data-close="modalReceipt">Закрыть</button></div>
+      <form id="whReceiptForm" class="row">
+        <label>Позиция
+          <select name="item_id" id="whReceiptItem" required></select>
+        </label>
+        <label>Количество
+          <input type="number" name="quantity" min="0.001" step="any" required>
+        </label>
+        <label>Дата
+          <input type="date" name="occurred_on" required>
+        </label>
+        <label style="grid-column: 1 / -1">Комментарий
+          <textarea name="note" placeholder="Поставка"></textarea>
+        </label>
+        <button type="submit" class="btn">Оприходовать</button>
+      </form>
+      <p class="error" id="whReceiptError" hidden></p>
+    </div>
+  </div>
+  <div id="modalItem" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <div class="modal-head"><h2>Новая позиция</h2><button type="button" class="btn secondary" data-close="modalItem">Закрыть</button></div>
+      <form id="whItemForm" class="row">
+        <label>Название
+          <input name="name" required>
+        </label>
+        <label>Ед. изм.
+          <input name="unit_label" value="шт">
+        </label>
+        <label>Мин. остаток
+          <input type="number" name="min_stock" min="0" step="any" value="0">
+        </label>
+        <button type="submit" class="btn">Добавить</button>
+      </form>
+    </div>
+  </div>
+  <div id="modalJournal" class="modal-backdrop" hidden>
+    <div class="modal wide" role="dialog">
+      <div class="modal-head"><h2>Журнал склада</h2><button type="button" class="btn secondary" data-close="modalJournal">Закрыть</button></div>
+      <div class="filters">
+        <label>С <input type="date" id="whFilterFrom"></label>
+        <label>По <input type="date" id="whFilterTo"></label>
+        <button type="button" class="btn secondary" id="whRefresh">Обновить</button>
+      </div>
+      <div id="whMoveTable"></div>
+    </div>
   </div>
   <script src="app.js" type="module"></script>
 </body>

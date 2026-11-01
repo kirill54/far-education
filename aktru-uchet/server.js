@@ -3,13 +3,37 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { openDb, unitBySlug } from './db.js';
-import { generateToken, hashToken, isManager, resolveUser } from './auth.js';
+import {
+  createSession,
+  generateToken,
+  hashToken,
+  isManager,
+  normalizeEmail,
+  readSessionCookie,
+  resolveUser,
+  sessionCookie,
+} from './auth.js';
+import { sendLoginCode, smtpConfigured } from './mail.js';
 import { listItemsWithStock, stockForItem } from './warehouse.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3847;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const db = openDb(process.env.DB_PATH || './data/aktru.db');
+ensureBootstrapAdmin(db);
+
+function ensureBootstrapAdmin(database) {
+  const email = normalizeEmail(process.env.ADMIN_EMAIL || '');
+  if (!email) return;
+  const existing = database.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing) return;
+  database
+    .prepare(
+      `INSERT INTO users (name, role, token_hash, email, active) VALUES (?, 'admin', ?, ?, 1)`,
+    )
+    .run('Администратор', hashToken(generateToken()), email);
+  console.log(`Создан администратор: ${email}`);
+}
 
 const app = express();
 app.use(express.json());
@@ -17,10 +41,8 @@ app.use(express.json());
 function attachUser(req, res, next) {
   const header = req.get('authorization') || '';
   const bearer = header.startsWith('Bearer ') ? header.slice(7) : '';
-  req.user = resolveUser(db, bearer, ADMIN_TOKEN || null);
-  if (!ADMIN_TOKEN && !bearer) {
-    req.user = { id: -1, name: 'dev', role: 'admin', employee_id: null };
-  }
+  const token = bearer || readSessionCookie(req);
+  req.user = resolveUser(db, token, ADMIN_TOKEN || null);
   next();
 }
 
@@ -41,7 +63,86 @@ function requireManager(req, res, next) {
 app.use(attachUser);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, name: 'aktru-uchet' });
+  res.json({ ok: true, name: 'aktru-uchet', mail: smtpConfigured() });
+});
+
+app.post('/api/auth/request-code', async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'Укажите email' });
+  }
+  const user = db
+    .prepare('SELECT id, active FROM users WHERE email = ?')
+    .get(email);
+  if (!user || !user.active) {
+    return res.status(403).json({
+      error: 'Этот адрес не в списке доступа. Попросите администратора добавить его.',
+    });
+  }
+  const recent = db
+    .prepare(
+      `SELECT created_at FROM login_codes WHERE email = ? ORDER BY id DESC LIMIT 1`,
+    )
+    .get(email);
+  if (recent) {
+    const age = Date.now() - new Date(recent.created_at + 'Z').getTime();
+    if (Number.isFinite(age) && age >= 0 && age < 30000) {
+      return res.status(429).json({ error: 'Код уже отправлен. Подождите полминуты.' });
+    }
+  }
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  db.prepare(
+    `INSERT INTO login_codes (email, code_hash, expires_at) VALUES (?, ?, ?)`,
+  ).run(email, hashToken(code), expires);
+  try {
+    const result = await sendLoginCode(email, code);
+    const body = { ok: true, delivered: result.delivered };
+    if (!result.delivered) body.dev_code = code;
+    res.json(body);
+  } catch (err) {
+    console.error(err);
+    res.status(502).json({ error: 'Не удалось отправить письмо' });
+  }
+});
+
+app.post('/api/auth/verify', (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const code = String(req.body?.code || '').trim();
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Нужны email и код' });
+  }
+  const user = db
+    .prepare('SELECT * FROM users WHERE email = ? AND active = 1')
+    .get(email);
+  if (!user) return res.status(403).json({ error: 'Нет доступа' });
+  const row = db
+    .prepare(
+      `SELECT * FROM login_codes WHERE email = ? AND used = 0 ORDER BY id DESC LIMIT 1`,
+    )
+    .get(email);
+  if (!row || new Date(row.expires_at).getTime() < Date.now()) {
+    return res.status(400).json({ error: 'Код истёк. Запросите новый.' });
+  }
+  if (row.code_hash !== hashToken(code)) {
+    return res.status(400).json({ error: 'Неверный код' });
+  }
+  db.prepare('UPDATE login_codes SET used = 1 WHERE id = ?').run(row.id);
+  const token = createSession(db, user.id);
+  res.setHeader('Set-Cookie', sessionCookie(token));
+  res.json({
+    ok: true,
+    user: { id: user.id, name: user.name, role: user.role, email: user.email },
+  });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = readSessionCookie(req);
+  if (token) {
+    db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hashToken(token));
+  }
+  res.setHeader('Set-Cookie', sessionCookie(''));
+  res.json({ ok: true });
 });
 
 app.get('/api/me', requireAuth, (req, res) => {
@@ -180,6 +281,99 @@ app.delete('/api/transactions/:id', requireAuth, requireManager, (req, res) => {
   const info = db.prepare('DELETE FROM transactions WHERE id = ?').run(id);
   if (info.changes === 0) return res.status(404).json({ error: 'Не найдено' });
   res.json({ ok: true });
+});
+
+app.get('/api/dashboard', requireAuth, requireManager, (req, res) => {
+  const { from, to } = req.query;
+  const params = [];
+  let dateFilter = '';
+  if (from) {
+    dateFilter += ' AND occurred_on >= ?';
+    params.push(from);
+  }
+  if (to) {
+    dateFilter += ' AND occurred_on <= ?';
+    params.push(to);
+  }
+  const joinExtra = dateFilter.replace(/^ AND /, '');
+  const onClause = joinExtra
+    ? `t.unit_id = u.id AND ${joinExtra}`
+    : 't.unit_id = u.id';
+  const units = db
+    .prepare(
+      `SELECT u.id, u.slug, u.name,
+              COALESCE(SUM(CASE WHEN t.kind = 'income' THEN t.amount_rub ELSE 0 END), 0) AS income,
+              COALESCE(SUM(CASE WHEN t.kind = 'expense' THEN t.amount_rub ELSE 0 END), 0) AS expense
+       FROM units u
+       LEFT JOIN transactions t ON ${onClause}
+       GROUP BY u.id
+       ORDER BY u.sort_order`,
+    )
+    .all(...params)
+    .map((row) => ({ ...row, balance: row.income - row.expense }));
+  const total = units.reduce(
+    (acc, u) => ({
+      income: acc.income + u.income,
+      expense: acc.expense + u.expense,
+    }),
+    { income: 0, expense: 0 },
+  );
+  total.balance = total.income - total.expense;
+
+  const saleParams = [];
+  let saleWhere = '';
+  if (from) {
+    saleWhere += ' AND occurred_on >= ?';
+    saleParams.push(from);
+  }
+  if (to) {
+    saleWhere += ' AND occurred_on <= ?';
+    saleParams.push(to);
+  }
+  const reported = db
+    .prepare(
+      `SELECT COALESCE(SUM(amount_rub), 0) AS total, COUNT(*) AS cnt FROM employee_sales WHERE 1=1 ${saleWhere}`,
+    )
+    .get(...saleParams);
+
+  const stock = listItemsWithStock(db, true);
+  const low = stock.filter((i) => i.below_min);
+
+  const txParams = [];
+  const txClauses = [];
+  if (from) {
+    txClauses.push('t.occurred_on >= ?');
+    txParams.push(from);
+  }
+  if (to) {
+    txClauses.push('t.occurred_on <= ?');
+    txParams.push(to);
+  }
+  const txWhere = txClauses.length ? `WHERE ${txClauses.join(' AND ')}` : '';
+  const recent = db
+    .prepare(
+      `SELECT t.id, u.name AS unit_name, t.kind, t.amount_rub, t.occurred_on, t.description
+       FROM transactions t JOIN units u ON u.id = t.unit_id
+       ${txWhere}
+       ORDER BY t.occurred_on DESC, t.id DESC LIMIT 8`,
+    )
+    .all(...txParams);
+
+  res.json({
+    from: from || null,
+    to: to || null,
+    total,
+    units,
+    reported_sales_rub: reported.total,
+    reported_sales_count: reported.cnt,
+    low_stock: low.map((i) => ({
+      name: i.name,
+      balance: i.stock_balance,
+      unit_label: i.unit_label,
+      min_stock: i.min_stock,
+    })),
+    recent,
+  });
 });
 
 app.get('/api/balance', requireAuth, requireManager, (req, res) => {
@@ -414,7 +608,7 @@ app.get('/api/users', requireAuth, (req, res) => {
   }
   const rows = db
     .prepare(
-      `SELECT u.id, u.name, u.role, u.employee_id, e.name AS employee_name, u.active, u.created_at
+      `SELECT u.id, u.name, u.role, u.email, u.employee_id, e.name AS employee_name, u.active, u.created_at
        FROM users u LEFT JOIN employees e ON e.id = u.employee_id
        ORDER BY u.id`,
     )
@@ -426,29 +620,39 @@ app.post('/api/users', requireAuth, (req, res) => {
   if (req.user.role !== 'admin' && !(req.user.id === 0)) {
     return res.status(403).json({ error: 'Только администратор' });
   }
-  const { name, role, employee_id } = req.body || {};
-  if (!name || !role) {
-    return res.status(400).json({ error: 'Нужны name и role' });
+  const { name, role, employee_id, email } = req.body || {};
+  const normalized = normalizeEmail(email);
+  if (!name || !role || !normalized) {
+    return res.status(400).json({ error: 'Нужны name, email и role' });
   }
   if (!['admin', 'manager', 'staff'].includes(role)) {
     return res.status(400).json({ error: 'role: admin | manager | staff' });
   }
   if (role === 'staff' && !employee_id) {
-    return res.status(400).json({ error: 'Для staff укажите employee_id' });
+    return res.status(400).json({ error: 'Для сотрудника укажите карточку в справочнике' });
   }
-  const token = generateToken();
-  const info = db
-    .prepare(
-      `INSERT INTO users (name, role, token_hash, employee_id) VALUES (?, ?, ?, ?)`,
-    )
-    .run(name.trim(), role, hashToken(token), employee_id ? Number(employee_id) : null);
-  res.status(201).json({
-    id: info.lastInsertRowid,
-    name: name.trim(),
-    role,
-    employee_id: employee_id ? Number(employee_id) : null,
-    token,
-  });
+  try {
+    const info = db
+      .prepare(
+        `INSERT INTO users (name, role, token_hash, employee_id, email) VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(
+        name.trim(),
+        role,
+        hashToken(generateToken()),
+        employee_id ? Number(employee_id) : null,
+        normalized,
+      );
+    res.status(201).json({
+      id: info.lastInsertRowid,
+      name: name.trim(),
+      role,
+      email: normalized,
+      employee_id: employee_id ? Number(employee_id) : null,
+    });
+  } catch {
+    res.status(409).json({ error: 'Такой email уже есть' });
+  }
 });
 
 app.patch('/api/users/:id', requireAuth, (req, res) => {
@@ -458,16 +662,22 @@ app.patch('/api/users/:id', requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Не найдено' });
-  const { active, name, role, employee_id } = req.body || {};
-  db.prepare(
-    `UPDATE users SET name = ?, role = ?, employee_id = ?, active = ? WHERE id = ?`,
-  ).run(
-    name !== undefined ? String(name).trim() : existing.name,
-    role !== undefined ? role : existing.role,
-    employee_id !== undefined ? (employee_id ? Number(employee_id) : null) : existing.employee_id,
-    active !== undefined ? (active ? 1 : 0) : existing.active,
-    id,
-  );
+  const { active, name, role, employee_id, email } = req.body || {};
+  const nextEmail = email !== undefined ? normalizeEmail(email) : existing.email;
+  try {
+    db.prepare(
+      `UPDATE users SET name = ?, role = ?, employee_id = ?, active = ?, email = ? WHERE id = ?`,
+    ).run(
+      name !== undefined ? String(name).trim() : existing.name,
+      role !== undefined ? role : existing.role,
+      employee_id !== undefined ? (employee_id ? Number(employee_id) : null) : existing.employee_id,
+      active !== undefined ? (active ? 1 : 0) : existing.active,
+      nextEmail,
+      id,
+    );
+  } catch {
+    return res.status(409).json({ error: 'Такой email уже есть' });
+  }
   res.json({ ok: true });
 });
 

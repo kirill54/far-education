@@ -1,28 +1,15 @@
-const TOKEN_KEY = 'aktru_access_token';
-
 let me = null;
 let units = [];
 let categories = [];
 let employees = [];
 let warehouseItems = [];
 
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || '';
-}
-
-function setToken(v) {
-  if (v) localStorage.setItem(TOKEN_KEY, v);
-  else localStorage.removeItem(TOKEN_KEY);
-}
-
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (options.body && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(path, { ...options, headers });
+  const res = await fetch(path, { credentials: 'include', ...options, headers });
   const text = await res.text();
   let data;
   try {
@@ -182,11 +169,15 @@ async function loadMeta() {
   if (me?.is_manager) refreshCategorySelect();
 }
 
-async function loadBalance(from, to) {
+async function loadDashboard(from, to) {
   const q = new URLSearchParams();
   if (from) q.set('from', from);
   if (to) q.set('to', to);
-  const data = await api(`/api/balance?${q}`);
+  const data = await api(`/api/dashboard?${q}`);
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi income"><div class="label">Доход</div><div class="value">${fmtRub(data.total.income)}</div></div>
+    <div class="kpi expense"><div class="label">Расход</div><div class="value">${fmtRub(data.total.expense)}</div></div>
+    <div class="kpi balance"><div class="label">Баланс</div><div class="value">${fmtRub(data.total.balance)}</div></div>`;
   const root = document.getElementById('balanceCards');
   root.innerHTML = '';
   for (const u of data.units) {
@@ -198,13 +189,17 @@ async function loadBalance(from, to) {
       <div class="label" style="margin-top:8px">+ ${fmtRub(u.income)} / − ${fmtRub(u.expense)}</div>`;
     root.appendChild(card);
   }
-  const total = document.createElement('div');
-  total.className = 'card total';
-  total.innerHTML = `
-    <div class="label">Итого по базе</div>
-    <div class="value">${fmtRub(data.total.balance)}</div>
-    <div class="label" style="margin-top:8px">+ ${fmtRub(data.total.income)} / − ${fmtRub(data.total.expense)}</div>`;
-  root.appendChild(total);
+  document.getElementById('dashExtra').innerHTML = `
+    <p class="hint" style="margin:0">Продажи сотрудников для премий: <strong>${fmtRub(data.reported_sales_rub)}</strong> (${data.reported_sales_count} записей).</p>`;
+  const low = document.getElementById('dashLowStock');
+  if (!data.low_stock.length) {
+    low.innerHTML = '<p class="hint" style="margin:0">Все позиции выше минимума.</p>';
+  } else {
+    low.innerHTML = '<ul class="hint">' + data.low_stock.map((i) =>
+      `<li>${escapeHtml(i.name)}: ${i.balance} ${escapeHtml(i.unit_label)} (мин. ${i.min_stock})</li>`,
+    ).join('') + '</ul>';
+  }
+  document.getElementById('recentTx').innerHTML = renderTxTable(data.recent || [], false);
 }
 
 function renderTxTable(rows, withDelete) {
@@ -273,8 +268,7 @@ async function refreshDashboard() {
   if (!me?.is_manager) return;
   const from = document.getElementById('dashFrom').value;
   const to = document.getElementById('dashTo').value;
-  await loadBalance(from, to);
-  await loadRecentTx(from, to);
+  await loadDashboard(from, to);
 }
 
 function renderSalesTable(rows, canDelete) {
@@ -485,20 +479,52 @@ async function loadUsers() {
     document.getElementById('usersTable').innerHTML = '<p class="hint">Пока никого нет.</p>';
     return;
   }
+  const roleOpts = (current) =>
+    ['staff', 'manager', 'admin']
+      .map((r) => `<option value="${r}" ${r === current ? 'selected' : ''}>${r === 'staff' ? 'Сотрудник' : r === 'manager' ? 'Управляющий' : 'Администратор'}</option>`)
+      .join('');
   let html = `<table><thead><tr>
-    <th>id</th><th>Имя</th><th>Роль</th><th>Сотрудник</th><th>Активен</th>
+    <th>Email</th><th>Имя</th><th>Роль</th><th>Сотрудник</th><th>Доступ</th>
   </tr></thead><tbody>`;
   for (const u of rows) {
     html += `<tr>
-      <td>${u.id}</td>
+      <td>${escapeHtml(u.email || '— нет email')}</td>
       <td>${escapeHtml(u.name)}</td>
-      <td>${u.role}</td>
+      <td><select data-role-user="${u.id}">${roleOpts(u.role)}</select></td>
       <td>${escapeHtml(u.employee_name || '—')}</td>
-      <td>${u.active ? 'да' : 'нет'}</td>
+      <td><button type="button" class="btn secondary" data-toggle-user="${u.id}" data-active="${u.active ? '1' : '0'}">${u.active ? 'Отключить' : 'Включить'}</button></td>
     </tr>`;
   }
   html += '</tbody></table>';
-  document.getElementById('usersTable').innerHTML = html;
+  const wrap = document.getElementById('usersTable');
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-role-user]').forEach((sel) => {
+    sel.addEventListener('change', async () => {
+      try {
+        await api(`/api/users/${sel.dataset.roleUser}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ role: sel.value }),
+        });
+      } catch (e) {
+        alert(e.message);
+        await loadUsers();
+      }
+    });
+  });
+  wrap.querySelectorAll('[data-toggle-user]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const active = btn.dataset.active !== '1';
+      try {
+        await api(`/api/users/${btn.dataset.toggleUser}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ active }),
+        });
+        await loadUsers();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  });
 }
 
 function applySeasonDates() {
@@ -515,17 +541,102 @@ function applySeasonDates() {
   }
 }
 
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.hidden = false;
+  const date = el.querySelector('input[type=date]');
+  if (date && !date.value) date.value = todayIso();
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = true;
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').hidden = false;
+  document.getElementById('appRoot').hidden = true;
+}
+
+function showApp() {
+  document.getElementById('loginScreen').hidden = true;
+  document.getElementById('appRoot').hidden = false;
+}
+
 function bindForms() {
-  document.getElementById('saveToken').addEventListener('click', async () => {
-    setToken(document.getElementById('tokenInput').value.trim());
+  document.getElementById('emailForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('loginError');
+    const hint = document.getElementById('loginHint');
+    err.hidden = true;
+    hint.textContent = '';
+    const email = document.getElementById('loginEmail').value.trim();
     try {
-      await bootstrap();
+      const data = await api('/api/auth/request-code', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      document.getElementById('emailForm').hidden = true;
+      document.getElementById('codeForm').hidden = false;
+      document.getElementById('loginCode').focus();
+      if (data.dev_code) {
+        hint.textContent = `Почта на сервере ещё не настроена. Код для входа: ${data.dev_code}`;
+      } else {
+        hint.textContent = `Код отправлен на ${email}. Действует 10 минут.`;
+      }
     } catch (e) {
-      setToken('');
-      alert('Не удалось войти: ' + e.message);
+      err.textContent = e.message;
+      err.hidden = false;
     }
   });
-  document.getElementById('tokenInput').value = getToken();
+
+  document.getElementById('codeForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('loginError');
+    err.hidden = true;
+    try {
+      await api('/api/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: document.getElementById('loginEmail').value.trim(),
+          code: document.getElementById('loginCode').value.trim(),
+        }),
+      });
+      await bootstrap();
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    }
+  });
+
+  document.getElementById('backToEmail').addEventListener('click', () => {
+    document.getElementById('codeForm').hidden = true;
+    document.getElementById('emailForm').hidden = false;
+    document.getElementById('loginHint').textContent = '';
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await api('/api/auth/logout', { method: 'POST' });
+    me = null;
+    showLogin();
+  });
+
+  document.getElementById('openIssue').addEventListener('click', () => openModal('modalIssue'));
+  document.getElementById('openReceipt')?.addEventListener('click', () => openModal('modalReceipt'));
+  document.getElementById('openItem')?.addEventListener('click', () => openModal('modalItem'));
+  document.getElementById('openJournal').addEventListener('click', () => {
+    openModal('modalJournal');
+    loadWarehouseMovements();
+  });
+  document.querySelectorAll('[data-close]').forEach((btn) => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+    backdrop.addEventListener('click', (ev) => {
+      if (ev.target === backdrop) backdrop.hidden = true;
+    });
+  });
 
   document.getElementById('txUnit')?.addEventListener('change', refreshCategorySelect);
   document.getElementById('txKind')?.addEventListener('change', refreshCategorySelect);
@@ -579,6 +690,7 @@ function bindForms() {
       ev.target.querySelector('[name=occurred_on]').value = todayIso();
       await loadWarehouseItems();
       await loadWarehouseMovements();
+      closeModal('modalIssue');
     } catch (e) {
       err.textContent = e.message;
       err.hidden = false;
@@ -605,6 +717,7 @@ function bindForms() {
       ev.target.querySelector('[name=occurred_on]').value = todayIso();
       await loadWarehouseItems();
       await loadWarehouseMovements();
+      closeModal('modalReceipt');
     } catch (e) {
       err.textContent = e.message;
       err.hidden = false;
@@ -626,6 +739,7 @@ function bindForms() {
       ev.target.reset();
       ev.target.querySelector('[name=unit_label]').value = 'шт';
       await loadWarehouseItems();
+      closeModal('modalItem');
     } catch (e) {
       alert(e.message);
     }
@@ -682,12 +796,10 @@ function bindForms() {
   document.getElementById('userForm')?.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const err = document.getElementById('userError');
-    const reveal = document.getElementById('newUserToken');
     err.hidden = true;
-    reveal.hidden = true;
     const fd = new FormData(ev.target);
     const role = fd.get('role');
-    const body = { name: fd.get('name'), role };
+    const body = { name: fd.get('name'), role, email: fd.get('email') };
     if (role === 'staff') {
       const eid = fd.get('employee_id');
       if (!eid) {
@@ -698,9 +810,7 @@ function bindForms() {
       body.employee_id = Number(eid);
     }
     try {
-      const created = await api('/api/users', { method: 'POST', body: JSON.stringify(body) });
-      reveal.hidden = false;
-      reveal.textContent = `Токен для ${created.name} (скопируйте сейчас):\n\n${created.token}`;
+      await api('/api/users', { method: 'POST', body: JSON.stringify(body) });
       ev.target.reset();
       await loadUsers();
     } catch (e) {
@@ -739,11 +849,8 @@ function bindForms() {
 }
 
 async function bootstrap() {
-  if (!getToken()) {
-    alert('Введите токен — его выдаёт управляющий');
-    return;
-  }
   await loadMe();
+  showApp();
   await loadMeta();
   applySeasonDates();
   document.querySelector('#salesForm [name=occurred_on]') &&
@@ -771,12 +878,10 @@ async function main() {
   initTabs();
   bindForms();
   applySeasonDates();
-  if (getToken()) {
-    try {
-      await bootstrap();
-    } catch (e) {
-      console.error(e);
-    }
+  try {
+    await bootstrap();
+  } catch {
+    showLogin();
   }
 }
 

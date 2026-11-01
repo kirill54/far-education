@@ -113,8 +113,36 @@ function migrate(db) {
 
     CREATE INDEX IF NOT EXISTS idx_wh_mov_item ON warehouse_movements(item_id, occurred_on);
     CREATE INDEX IF NOT EXISTS idx_wh_mov_kind ON warehouse_movements(kind);
+
+    CREATE TABLE IF NOT EXISTS login_codes (
+      id INTEGER PRIMARY KEY,
+      email TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
+  ensureColumn(db, 'users', 'email', 'TEXT');
+  db.exec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL`,
+  );
   seedWarehouseItems(db);
+}
+
+function ensureColumn(db, table, column, ddl) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
 }
 
 function seedWarehouseItems(db) {
