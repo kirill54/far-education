@@ -91,7 +91,7 @@ app.post('/api/auth/request-code', async (req, res) => {
     }
   }
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   db.prepare(
     `INSERT INTO login_codes (email, code_hash, expires_at) VALUES (?, ?, ?)`,
   ).run(email, hashToken(code), expires);
@@ -106,28 +106,42 @@ app.post('/api/auth/request-code', async (req, res) => {
   }
 });
 
+function expiresMs(value) {
+  const raw = String(value ?? '').trim();
+  if (/^\d+$/.test(raw)) return Number(raw);
+  const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw);
+  const iso = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  const parsed = Date.parse(hasZone ? iso : `${iso}Z`);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 app.post('/api/auth/verify', (req, res) => {
   const email = normalizeEmail(req.body?.email);
-  const code = String(req.body?.code || '').trim();
-  if (!email || !code) {
-    return res.status(400).json({ error: 'Нужны email и код' });
+  const code = String(req.body?.code || '').replace(/\D/g, '');
+  if (!email || code.length < 6) {
+    return res.status(400).json({ error: 'Нужны email и код из 6 цифр' });
   }
   const user = db
     .prepare('SELECT * FROM users WHERE email = ? AND active = 1')
     .get(email);
   if (!user) return res.status(403).json({ error: 'Нет доступа' });
-  const row = db
+  const rows = db
     .prepare(
-      `SELECT * FROM login_codes WHERE email = ? AND used = 0 ORDER BY id DESC LIMIT 1`,
+      `SELECT * FROM login_codes WHERE email = ? ORDER BY id DESC LIMIT 8`,
     )
-    .get(email);
-  if (!row || new Date(row.expires_at).getTime() < Date.now()) {
-    return res.status(400).json({ error: 'Код истёк. Запросите новый.' });
+    .all(email);
+  const row = rows.find((item) => item.code_hash === hashToken(code));
+  if (!row) {
+    return res.status(400).json({
+      error: 'Неверный код. Запросите новый — на экране появится актуальный.',
+    });
   }
-  if (row.code_hash !== hashToken(code)) {
-    return res.status(400).json({ error: 'Неверный код' });
+  if (expiresMs(row.expires_at) < Date.now()) {
+    return res.status(400).json({ error: 'Срок этого кода вышел (30 минут). Запросите новый.' });
   }
-  db.prepare('UPDATE login_codes SET used = 1 WHERE id = ?').run(row.id);
+  if (!row.used) {
+    db.prepare('UPDATE login_codes SET used = 1 WHERE id = ?').run(row.id);
+  }
   const token = createSession(db, user.id);
   res.setHeader('Set-Cookie', sessionCookie(token));
   res.json({

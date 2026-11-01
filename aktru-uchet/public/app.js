@@ -1,4 +1,5 @@
 let me = null;
+let pendingLoginEmail = '';
 let units = [];
 let categories = [];
 let employees = [];
@@ -572,34 +573,43 @@ function bindForms() {
     err.hidden = true;
     hint.textContent = '';
     const email = document.getElementById('loginEmail').value.trim();
+    const btn = document.getElementById('sendCodeBtn');
+    btn.disabled = true;
     try {
       const data = await api('/api/auth/request-code', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
+      pendingLoginEmail = email;
       document.getElementById('emailForm').hidden = true;
       document.getElementById('codeForm').hidden = false;
-      document.getElementById('loginCode').focus();
+      const codeInput = document.getElementById('loginCode');
+      codeInput.value = data.dev_code || '';
+      codeInput.focus();
       if (data.dev_code) {
-        hint.textContent = `Почта на сервере ещё не настроена. Код для входа: ${data.dev_code}`;
+        hint.textContent = `Почта на сервере ещё не настроена. Код уже подставлен в поле — нажмите «Войти». Он действует 30 минут.`;
       } else {
-        hint.textContent = `Код отправлен на ${email}. Действует 10 минут.`;
+        hint.textContent = `Код отправлен на ${email}. Действует 30 минут.`;
       }
     } catch (e) {
       err.textContent = e.message;
       err.hidden = false;
+    } finally {
+      btn.disabled = false;
     }
   });
 
   document.getElementById('codeForm').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const err = document.getElementById('loginError');
+    const submit = ev.target.querySelector('button[type="submit"]');
     err.hidden = true;
+    submit.disabled = true;
     try {
       await api('/api/auth/verify', {
         method: 'POST',
         body: JSON.stringify({
-          email: document.getElementById('loginEmail').value.trim(),
+          email: pendingLoginEmail || document.getElementById('loginEmail').value.trim(),
           code: document.getElementById('loginCode').value.trim(),
         }),
       });
@@ -607,6 +617,8 @@ function bindForms() {
     } catch (e) {
       err.textContent = e.message;
       err.hidden = false;
+    } finally {
+      submit.disabled = false;
     }
   });
 
