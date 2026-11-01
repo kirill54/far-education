@@ -38,6 +38,15 @@ function seasonRange(year) {
   return { from: `${year}-05-01`, to: `${year}-09-30` };
 }
 
+function currentMonthRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const month = String(m + 1).padStart(2, '0');
+  const last = String(new Date(y, m + 1, 0).getDate()).padStart(2, '0');
+  return { from: `${y}-${month}-01`, to: `${y}-${month}-${last}` };
+}
+
 function seasonToDate(year) {
   const s = seasonRange(year);
   const today = todayIso();
@@ -637,13 +646,22 @@ function applySeasonDates() {
   const y = new Date().getFullYear();
   const s = seasonRange(y);
   const to = seasonToDate(y);
-  for (const id of ['dashFrom', 'txFilterFrom', 'salesFilterFrom', 'payFrom', 'whFilterFrom', 'guideFrom']) {
+  for (const id of ['dashFrom', 'txFilterFrom', 'whFilterFrom', 'guideFrom']) {
     const el = document.getElementById(id);
     if (el) el.value = s.from;
   }
-  for (const id of ['dashTo', 'txFilterTo', 'salesFilterTo', 'payTo', 'whFilterTo', 'guideTo']) {
+  for (const id of ['dashTo', 'txFilterTo', 'whFilterTo', 'guideTo']) {
     const el = document.getElementById(id);
     if (el) el.value = to;
+  }
+  const month = currentMonthRange();
+  for (const id of ['salesFilterFrom', 'payFrom']) {
+    const el = document.getElementById(id);
+    if (el) el.value = month.from;
+  }
+  for (const id of ['salesFilterTo', 'payTo']) {
+    const el = document.getElementById(id);
+    if (el) el.value = month.to;
   }
 }
 
@@ -1082,6 +1100,7 @@ async function bootstrap() {
   await refreshDashboard();
   if (me?.is_manager) await loadTxJournal();
   await loadSalesJournal();
+  if (me?.is_manager || me?.role === 'staff') await calcPayroll();
   await loadWarehouseItems();
   await loadWarehouseMovements();
   await loadEmployees();
