@@ -334,23 +334,47 @@ async function loadEmployees() {
       '<p class="hint">Добавьте сотрудников и выдайте им токены на вкладке «Доступ».</p>';
     return;
   }
+  const canEditPay = !!me?.is_admin;
   let html = `<table><thead><tr>
-    <th>id</th><th>ФИО</th><th>Подразделение</th><th>Должность</th>
-    <th class="num">Оклад</th><th class="num">% премии</th><th>Активен</th>
+    <th>ФИО</th><th>Подразделение</th><th>Должность</th>
+    <th class="num">Оклад</th><th class="num">% премии</th><th></th>
   </tr></thead><tbody>`;
   for (const e of employees) {
+    const payCells = canEditPay
+      ? `<td class="num"><input data-pay-base="${e.id}" type="number" min="0" step="100" value="${e.monthly_base_rub}" class="w-28 text-right"></td>
+         <td class="num"><input data-pay-pct="${e.id}" type="number" min="0" max="100" step="0.1" value="${e.turnover_bonus_pct}" class="w-20 text-right"></td>
+         <td><button type="button" class="btn secondary" data-save-pay="${e.id}">Сохранить</button></td>`
+      : `<td class="num">${fmtRub(e.monthly_base_rub)}</td>
+         <td class="num">${e.turnover_bonus_pct}%</td><td></td>`;
     html += `<tr>
-      <td>${e.id}</td>
       <td>${escapeHtml(e.name)}</td>
       <td>${e.unit_name}</td>
       <td>${escapeHtml(e.role || '')}</td>
-      <td class="num">${fmtRub(e.monthly_base_rub)}</td>
-      <td class="num">${e.turnover_bonus_pct}%</td>
-      <td>${e.active ? 'да' : 'нет'}</td>
+      ${payCells}
     </tr>`;
   }
   html += '</tbody></table>';
-  document.getElementById('empTable').innerHTML = html;
+  const empWrap = document.getElementById('empTable');
+  empWrap.innerHTML = html;
+  empWrap.querySelectorAll('[data-save-pay]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.savePay;
+      const base = empWrap.querySelector(`[data-pay-base="${id}"]`).value;
+      const pct = empWrap.querySelector(`[data-pay-pct="${id}"]`).value;
+      try {
+        await api(`/api/employees/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            monthly_base_rub: Number(base),
+            turnover_bonus_pct: Number(pct),
+          }),
+        });
+        btn.textContent = 'Сохранено';
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
 }
 
 async function calcPayroll() {
@@ -415,8 +439,9 @@ async function loadWarehouseItems() {
     wrap.innerHTML = '<p class="hint">Нет позиций — управляющий добавит номенклатуру.</p>';
     return;
   }
+  const canEditItems = !!me?.is_manager;
   let html = `<table><thead><tr>
-    <th>Позиция</th><th>Ед.</th><th class="num">Остаток</th><th class="num">Мин.</th>
+    <th>Позиция</th><th>Ед.</th><th class="num">Остаток</th><th class="num">Мин.</th>${canEditItems ? '<th></th>' : ''}
   </tr></thead><tbody>`;
   for (const it of warehouseItems) {
     const cls = it.below_min ? ' class="low-stock"' : '';
@@ -425,10 +450,23 @@ async function loadWarehouseItems() {
       <td>${escapeHtml(it.unit_label)}</td>
       <td class="num stock-num">${it.stock_balance}</td>
       <td class="num">${it.min_stock || '—'}</td>
+      ${canEditItems ? `<td><button type="button" class="btn secondary" data-edit-item="${it.id}">Изменить</button></td>` : ''}
     </tr>`;
   }
   html += '</tbody></table>';
   wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-edit-item]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const item = warehouseItems.find((row) => row.id === Number(btn.dataset.editItem));
+      if (!item) return;
+      document.getElementById('editItemId').value = item.id;
+      document.getElementById('editItemName').value = item.name;
+      document.getElementById('editItemUnit').value = item.unit_label;
+      document.getElementById('editItemMin').value = item.min_stock;
+      document.getElementById('whEditError').hidden = true;
+      openModal('modalEditItem');
+    });
+  });
 }
 
 function renderWhMoveTable(rows, canDelete) {
@@ -801,6 +839,28 @@ function bindForms() {
       await loadWarehouseItems();
       await loadWarehouseMovements();
       closeModal('modalReceipt');
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    }
+  });
+
+  document.getElementById('whEditForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('whEditError');
+    err.hidden = true;
+    const fd = new FormData(ev.target);
+    try {
+      await api(`/api/warehouse/items/${fd.get('id')}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: fd.get('name'),
+          unit_label: fd.get('unit_label'),
+          min_stock: Number(fd.get('min_stock')),
+        }),
+      });
+      closeModal('modalEditItem');
+      await loadWarehouseItems();
     } catch (e) {
       err.textContent = e.message;
       err.hidden = false;

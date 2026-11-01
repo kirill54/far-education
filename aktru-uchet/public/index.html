@@ -4,9 +4,60 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Актру — учёт доходов и расходов</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
+  <style type="text/tailwindcss">
+    @layer components {
+      .btn { @apply inline-flex items-center justify-center rounded-lg bg-sky-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-60; }
+      .btn.secondary { @apply bg-slate-100 text-sky-950 hover:bg-slate-200; }
+      .btn.danger { @apply bg-red-50 px-2 text-red-700 hover:bg-red-100; }
+      .box { @apply mb-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm; }
+      .box h2 { @apply mb-3 text-lg font-semibold tracking-tight; }
+      label { @apply flex flex-col gap-1 text-xs font-semibold text-slate-600; }
+      input, select, textarea { @apply rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900; }
+      textarea { @apply min-h-16; }
+      table { @apply w-full text-sm; }
+      th { @apply pb-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500; }
+      td { @apply border-t border-slate-100 py-2 pr-2 align-middle; }
+      .num { @apply text-right tabular-nums; }
+      .hint { @apply text-sm leading-relaxed text-slate-500; }
+      .error { @apply mt-2 text-sm text-red-700; }
+      .row { @apply mt-3 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-3; }
+      .filters { @apply mb-4 flex flex-wrap items-end gap-3; }
+      .card { @apply rounded-xl border border-slate-200 bg-white p-4; }
+      .card .label, .kpi .label { @apply text-xs text-slate-500; }
+      .card .value { @apply text-xl font-bold tracking-tight; }
+      .card .value.positive { @apply text-emerald-700; }
+      .card .value.negative { @apply text-red-700; }
+      .kpi-row { @apply mb-4 grid gap-3 sm:grid-cols-3; }
+      .kpi { @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm; }
+      .kpi .value { @apply text-3xl font-bold tracking-tight; }
+      .kpi.income .value { @apply text-emerald-700; }
+      .kpi.expense .value { @apply text-red-700; }
+      .kpi.balance { @apply border-0 bg-gradient-to-br from-sky-800 to-slate-900 text-white; }
+      .kpi.balance .label { @apply text-sky-100; }
+      .dash-split { @apply mb-4 grid gap-4 lg:grid-cols-5; }
+      .grid-cards { @apply grid gap-3 sm:grid-cols-2; }
+      nav.tabs button { @apply rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-sky-950; }
+      nav.tabs button.active { @apply border-sky-800 bg-sky-800 text-white; }
+      .login-screen { @apply flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-100 to-slate-200 p-6; }
+      .login-card { @apply w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-lg; }
+      .login-card h1 { @apply text-3xl font-bold tracking-tight; }
+      .login-card form { @apply mt-4 flex flex-col gap-3; }
+      .eyebrow { @apply text-xs font-bold uppercase tracking-widest text-sky-800; }
+      .modal-backdrop { @apply fixed inset-0 z-30 flex items-center justify-center bg-slate-900/50 p-4; }
+      .modal { @apply max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl bg-white p-5 shadow-xl; }
+      .modal.wide { @apply max-w-4xl; }
+      .modal-head { @apply mb-3 flex items-center justify-between gap-3; }
+      .modal-head h2 { @apply text-xl font-semibold; }
+      .token-box { @apply flex items-center gap-3; }
+      .user-badge { @apply text-right text-sm font-semibold text-sky-800; }
+      tr.low-stock { @apply bg-amber-50; }
+      tr.low-stock .stock-num { @apply font-bold text-red-700; }
+    }
+  </style>
 </head>
-<body>
+<body class="min-h-screen bg-slate-100 text-slate-900 antialiased">
   <div id="loginScreen" class="login-screen">
     <div class="login-card">
       <p class="eyebrow">База Актру</p>
@@ -30,11 +81,11 @@
     </div>
   </div>
 
-  <div class="wrap" id="appRoot" hidden>
-    <header>
+  <div class="mx-auto max-w-6xl px-4 py-6" id="appRoot" hidden>
+    <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1>База Актру — учёт</h1>
-        <p class="sub">Летний сезон: цифры базы, продажи для премий и склад. Доступ — только по email из списка администратора.</p>
+        <h1 class="text-3xl font-bold tracking-tight">База Актру — учёт</h1>
+        <p class="mt-1 max-w-xl text-sm leading-relaxed text-slate-500">Летний сезон: цифры базы, продажи для премий и склад. Доступ — только по email из списка администратора.</p>
       </div>
       <div class="token-box">
         <span id="userBadge" class="user-badge"></span>
@@ -42,7 +93,7 @@
       </div>
     </header>
 
-    <nav class="tabs" role="tablist" id="mainTabs">
+    <nav class="tabs mb-5 flex flex-wrap gap-2" role="tablist" id="mainTabs">
       <button type="button" class="active" data-tab="dashboard" data-roles="admin,manager">Обзор</button>
       <button type="button" data-tab="sales" data-roles="admin,manager,staff">Продажи</button>
       <button type="button" data-tab="warehouse" data-roles="admin,manager,staff">Склад</button>
@@ -66,11 +117,11 @@
       </div>
       <div id="kpiRow" class="kpi-row"></div>
       <div class="dash-split">
-        <div class="box">
+        <div class="box lg:col-span-3">
           <h2>По подразделениям</h2>
           <div id="balanceCards" class="grid-cards"></div>
         </div>
-        <div class="box">
+        <div class="box lg:col-span-2">
           <h2>За период ещё</h2>
           <div id="dashExtra"></div>
           <h2 style="margin-top:18px">Склад: ниже минимума</h2>
@@ -203,6 +254,7 @@
     <section id="panel-staff" class="panel" data-roles="admin,manager">
       <div class="box">
         <h2>Добавить сотрудника</h2>
+        <p class="hint">Фиксированный оклад и процент премии указывает администратор.</p>
         <form id="empForm" class="row">
           <label>ФИО
             <input name="name" required>
@@ -213,10 +265,10 @@
           <label>Должность
             <input name="role" placeholder="Барista, повар…">
           </label>
-          <label>Оклад, ₽/мес (фикс)
+          <label data-roles="admin">Оклад, ₽/мес (фикс)
             <input type="number" name="monthly_base_rub" min="0" step="100" value="0">
           </label>
-          <label>% премии от своих продаж
+          <label data-roles="admin">% премии от своих продаж
             <input type="number" name="turnover_bonus_pct" min="0" max="100" step="0.1" value="0">
           </label>
           <button type="submit" class="btn">Добавить</button>
@@ -225,6 +277,7 @@
       </div>
       <div class="box">
         <h2>Список</h2>
+        <p class="hint" data-roles="admin">Оклад и процент премии меняет администратор. Сохраните строку после правки.</p>
         <div id="empTable"></div>
       </div>
     </section>
@@ -402,6 +455,25 @@
         </label>
         <button type="submit" class="btn">Добавить</button>
       </form>
+    </div>
+  </div>
+  <div id="modalEditItem" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog">
+      <div class="modal-head"><h2>Позиция склада</h2><button type="button" class="btn secondary" data-close="modalEditItem">Закрыть</button></div>
+      <form id="whEditForm" class="row">
+        <input type="hidden" name="id" id="editItemId">
+        <label>Название
+          <input name="name" id="editItemName" required>
+        </label>
+        <label>Ед. изм.
+          <input name="unit_label" id="editItemUnit" required>
+        </label>
+        <label>Мин. остаток
+          <input type="number" name="min_stock" id="editItemMin" min="0" step="any">
+        </label>
+        <button type="submit" class="btn">Сохранить</button>
+      </form>
+      <p class="error" id="whEditError" hidden></p>
     </div>
   </div>
   <div id="modalJournal" class="modal-backdrop" hidden>

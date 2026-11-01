@@ -569,6 +569,7 @@ app.post('/api/employees', requireAuth, requireManager, (req, res) => {
   if (!unit_id || !name) {
     return res.status(400).json({ error: 'Нужны unit_id и name' });
   }
+  const canSetPay = isAdmin(req.user);
   const info = db
     .prepare(
       `INSERT INTO employees (unit_id, name, role, monthly_base_rub, turnover_bonus_pct)
@@ -578,8 +579,8 @@ app.post('/api/employees', requireAuth, requireManager, (req, res) => {
       unit_id,
       name.trim(),
       (role || '').trim(),
-      Number(monthly_base_rub) || 0,
-      Number(turnover_bonus_pct) || 0,
+      canSetPay ? Number(monthly_base_rub) || 0 : 0,
+      canSetPay ? Number(turnover_bonus_pct) || 0 : 0,
     );
   res.status(201).json({ id: info.lastInsertRowid });
 });
@@ -589,6 +590,12 @@ app.patch('/api/employees/:id', requireAuth, requireManager, (req, res) => {
   const existing = db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Не найдено' });
   const body = req.body || {};
+  if (
+    (body.monthly_base_rub !== undefined || body.turnover_bonus_pct !== undefined) &&
+    !isAdmin(req.user)
+  ) {
+    return res.status(403).json({ error: 'Оклад и процент премии меняет администратор' });
+  }
   db.prepare(
     `UPDATE employees SET
        name = ?, role = ?, monthly_base_rub = ?, turnover_bonus_pct = ?, active = ?
