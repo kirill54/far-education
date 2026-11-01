@@ -36,6 +36,18 @@ function ensureBootstrapAdmin(database) {
   console.log(`Создан администратор: ${email}`);
 }
 
+const SALE_TYPES = {
+  cafe: 'Кафе',
+  products: 'Продукты',
+  merch: 'Мерч',
+  internet: 'Интернет',
+};
+
+function normalizeSaleType(value) {
+  const key = String(value || 'cafe');
+  return SALE_TYPES[key] ? key : null;
+}
+
 const app = express();
 app.use(express.json());
 
@@ -502,7 +514,7 @@ app.get('/api/sales', requireAuth, (req, res) => {
   const rows = db
     .prepare(
       `SELECT s.id, s.employee_id, e.name AS employee_name, s.unit_id, u.name AS unit_name,
-              s.amount_rub, s.occurred_on, s.note, s.created_at, s.shift_id,
+              s.amount_rub, s.sale_type, s.occurred_on, s.note, s.created_at, s.shift_id,
               cu.name AS created_by_name
        FROM employee_sales s
        JOIN employees e ON e.id = s.employee_id
@@ -517,7 +529,11 @@ app.get('/api/sales', requireAuth, (req, res) => {
 });
 
 app.post('/api/sales', requireAuth, (req, res) => {
-  const { employee_id, unit_id, amount_rub, occurred_on, note } = req.body || {};
+  const { employee_id, unit_id, amount_rub, occurred_on, note, sale_type } = req.body || {};
+  const type = normalizeSaleType(sale_type);
+  if (!type) {
+    return res.status(400).json({ error: 'Тип продажи: кафе, продукты, мерч или интернет' });
+  }
   let empId = employee_id ? Number(employee_id) : null;
   const unitId = unit_id ? Number(unit_id) : null;
 
@@ -550,10 +566,10 @@ app.post('/api/sales', requireAuth, (req, res) => {
   const creatorId = req.user.id > 0 ? req.user.id : null;
   const info = db
     .prepare(
-      `INSERT INTO employee_sales (employee_id, unit_id, amount_rub, occurred_on, note, created_by_user_id)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO employee_sales (employee_id, unit_id, amount_rub, sale_type, occurred_on, note, created_by_user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(empId, resolvedUnitId, amount, occurred_on, (note || '').trim(), creatorId);
+    .run(empId, resolvedUnitId, amount, type, occurred_on, (note || '').trim(), creatorId);
   res.status(201).json({ id: info.lastInsertRowid });
 });
 
@@ -814,6 +830,28 @@ app.get('/api/cash-shifts/open', requireAuth, requireManager, (req, res) => {
        ORDER BY s.occurred_on DESC, e.name`,
     )
     .all();
+  const parts = db
+    .prepare(
+      `SELECT employee_id, unit_id, occurred_on, sale_type, SUM(amount_rub) AS amount
+       FROM employee_sales
+       WHERE shift_id IS NULL
+       GROUP BY employee_id, unit_id, occurred_on, sale_type`,
+    )
+    .all();
+  for (const row of rows) {
+    row.types = parts
+      .filter(
+        (part) =>
+          part.employee_id === row.employee_id &&
+          part.unit_id === row.unit_id &&
+          part.occurred_on === row.occurred_on,
+      )
+      .map((part) => ({
+        sale_type: part.sale_type,
+        label: SALE_TYPES[part.sale_type] || part.sale_type,
+        amount: part.amount,
+      }));
+  }
   res.json(rows);
 });
 

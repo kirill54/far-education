@@ -147,6 +147,7 @@ function migrate(db) {
   `);
   ensureColumn(db, 'users', 'email', 'TEXT');
   ensureColumn(db, 'employee_sales', 'shift_id', 'INTEGER');
+  ensureColumn(db, 'employee_sales', 'sale_type', "TEXT NOT NULL DEFAULT 'cafe'");
   db.exec(
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL`,
   );

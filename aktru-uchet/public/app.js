@@ -241,16 +241,37 @@ function renderMonthChart(data) {
     const ih = Math.round((m.income / max) * 150);
     const eh = Math.round((m.expense / max) * 150);
     const tip = `${m.label}: доход ${fmtRub(m.income)}, расход ${fmtRub(m.expense)}, баланс ${fmtRub(m.balance)}`;
-    bars += `<g>
+    bars += `<g class="cursor-pointer" data-month="${m.ym}">
+      <rect x="${x - 6}" y="8" width="${group + 18}" height="${height - 16}" fill="transparent"></rect>
       <rect x="${x}" y="${base - ih}" width="${barW}" height="${ih}" rx="3" fill="#047857"><title>${escapeHtml(tip)}</title></rect>
       <rect x="${x + barW + 4}" y="${base - eh}" width="${barW}" height="${eh}" rx="3" fill="#b91c1c"><title>${escapeHtml(tip)}</title></rect>
       <text x="${x + barW}" y="${base + 18}" text-anchor="middle" fill="#64748b" font-size="12">${m.label}</text>
     </g>`;
   });
-  host.innerHTML = `<svg viewBox="0 0 ${width} ${height}" class="w-full min-w-[640px]" role="img" aria-label="Доход и расход по месяцам">
+  host.innerHTML = `<svg viewBox="0 0 ${width} ${height}" class="h-auto w-full min-w-[36rem]" role="img" aria-label="Доход и расход по месяцам">
     <line x1="0" y1="${base}" x2="${width}" y2="${base}" stroke="#e2e8f0"/>
     ${bars}
   </svg>`;
+  host.querySelectorAll('[data-month]').forEach((node) => {
+    node.addEventListener('click', () => {
+      const [year, month] = node.dataset.month.split('-');
+      const last = String(new Date(Number(year), Number(month), 0).getDate()).padStart(2, '0');
+      document.getElementById('dashFrom').value = `${year}-${month}-01`;
+      document.getElementById('dashTo').value = `${year}-${month}-${last}`;
+      refreshDashboard();
+    });
+  });
+}
+
+const SALE_TYPE_LABELS = {
+  cafe: 'Кафе',
+  products: 'Продукты',
+  merch: 'Мерч',
+  internet: 'Интернет',
+};
+
+function saleTypeLabel(code) {
+  return SALE_TYPE_LABELS[code] || code || '—';
 }
 
 function renderTxTable(rows, withDelete) {
@@ -325,7 +346,7 @@ async function refreshDashboard() {
 function renderSalesTable(rows, canDelete) {
   if (!rows.length) return '<p class="hint">Продаж пока нет — внесите первую сумму.</p>';
   let html = `<table><thead><tr>
-    <th>Дата</th><th>Сотрудник</th><th class="num">Сумма</th><th>Статус</th><th>Комментарий</th>
+    <th>Дата</th><th>Сотрудник</th><th>Тип</th><th class="num">Сумма</th><th>Статус</th><th>Комментарий</th>
     ${canDelete ? '<th></th>' : ''}
   </tr></thead><tbody>`;
   for (const s of rows) {
@@ -333,6 +354,7 @@ function renderSalesTable(rows, canDelete) {
     html += `<tr>
       <td>${s.occurred_on}</td>
       <td>${escapeHtml(s.employee_name)}</td>
+      <td>${escapeHtml(saleTypeLabel(s.sale_type))}</td>
       <td class="num">${fmtRub(s.amount_rub)}</td>
       <td>${accepted ? 'касса принята' : 'черновик'}</td>
       <td>${escapeHtml(s.note || '')}</td>`;
@@ -375,7 +397,7 @@ async function loadOpenShifts() {
       <td>${row.occurred_on}</td>
       <td>${escapeHtml(row.employee_name)}</td>
       <td>${escapeHtml(row.unit_name)}</td>
-      <td class="num">${fmtRub(row.draft_rub)}</td>
+      <td class="num">${fmtRub(row.draft_rub)}<div class="text-xs font-normal text-slate-500">${(row.types || []).map((part) => `${escapeHtml(part.label)} ${fmtRub(part.amount)}`).join(', ')}</div></td>
       <td><button type="button" class="btn" data-accept-shift="${row.employee_id}" data-unit="${row.unit_id}" data-date="${row.occurred_on}" data-draft="${row.draft_rub}" data-name="${escapeHtml(row.employee_name)}">Принять</button></td>
     </tr>`;
   }
@@ -1023,6 +1045,7 @@ function bindForms() {
     const body = {
       occurred_on: fd.get('occurred_on'),
       amount_rub: Number(fd.get('amount_rub')),
+      sale_type: fd.get('sale_type'),
       note: fd.get('note'),
     };
     if (me?.is_manager && fd.get('employee_id')) {
