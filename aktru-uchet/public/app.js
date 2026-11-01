@@ -219,6 +219,38 @@ async function loadDashboard(from, to) {
     ).join('') + '</ul>';
   }
   document.getElementById('recentTx').innerHTML = renderTxTable(data.recent || [], false);
+  renderMonthChart(data);
+}
+
+function renderMonthChart(data) {
+  const host = document.getElementById('monthChart');
+  const title = document.getElementById('monthChartTitle');
+  if (!host) return;
+  const months = data.months || [];
+  if (title) title.textContent = `Год ${data.year || ''} по месяцам`;
+  const max = Math.max(...months.map((m) => Math.max(m.income, m.expense)), 1);
+  const barW = 18;
+  const gap = 8;
+  const group = barW * 2 + gap;
+  const width = months.length * (group + 22) + 8;
+  const height = 220;
+  const base = 180;
+  let bars = '';
+  months.forEach((m, i) => {
+    const x = 8 + i * (group + 22);
+    const ih = Math.round((m.income / max) * 150);
+    const eh = Math.round((m.expense / max) * 150);
+    const tip = `${m.label}: доход ${fmtRub(m.income)}, расход ${fmtRub(m.expense)}, баланс ${fmtRub(m.balance)}`;
+    bars += `<g>
+      <rect x="${x}" y="${base - ih}" width="${barW}" height="${ih}" rx="3" fill="#047857"><title>${escapeHtml(tip)}</title></rect>
+      <rect x="${x + barW + 4}" y="${base - eh}" width="${barW}" height="${eh}" rx="3" fill="#b91c1c"><title>${escapeHtml(tip)}</title></rect>
+      <text x="${x + barW}" y="${base + 18}" text-anchor="middle" fill="#64748b" font-size="12">${m.label}</text>
+    </g>`;
+  });
+  host.innerHTML = `<svg viewBox="0 0 ${width} ${height}" class="w-full min-w-[640px]" role="img" aria-label="Доход и расход по месяцам">
+    <line x1="0" y1="${base}" x2="${width}" y2="${base}" stroke="#e2e8f0"/>
+    ${bars}
+  </svg>`;
 }
 
 function renderTxTable(rows, withDelete) {

@@ -372,9 +372,36 @@ app.get('/api/dashboard', requireAuth, requireManager, (req, res) => {
     )
     .all(...txParams);
 
+  const year = String(from || new Date().toISOString()).slice(0, 4);
+  const monthRows = db
+    .prepare(
+      `SELECT substr(occurred_on, 1, 7) AS ym,
+              COALESCE(SUM(CASE WHEN kind = 'income' THEN amount_rub ELSE 0 END), 0) AS income,
+              COALESCE(SUM(CASE WHEN kind = 'expense' THEN amount_rub ELSE 0 END), 0) AS expense
+       FROM transactions
+       WHERE occurred_on >= ? AND occurred_on < ?
+       GROUP BY ym`,
+    )
+    .all(`${year}-01-01`, `${Number(year) + 1}-01-01`);
+  const byYm = Object.fromEntries(monthRows.map((row) => [row.ym, row]));
+  const monthNames = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const months = monthNames.map((label, index) => {
+    const ym = `${year}-${String(index + 1).padStart(2, '0')}`;
+    const row = byYm[ym] || { income: 0, expense: 0 };
+    return {
+      ym,
+      label,
+      income: row.income,
+      expense: row.expense,
+      balance: row.income - row.expense,
+    };
+  });
+
   res.json({
     from: from || null,
     to: to || null,
+    year: Number(year),
+    months,
     total,
     units,
     reported_sales_rub: reported.total,
