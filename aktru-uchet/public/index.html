@@ -11,7 +11,7 @@
     <header>
       <div>
         <h1>База Актру — учёт</h1>
-        <p class="sub">Летний сезон (май–сентябрь): расходы и доходы базы ведёт управляющий; продажи для премии — каждый сотрудник сам. Оклад фиксированный, % премии задаёт руководство.</p>
+        <p class="sub">Летний сезон: учёт базы, продажи для премий и списания со склада — каждый вносит своё; оклад и % премии задаёт руководство.</p>
       </div>
       <div class="token-box">
         <span id="userBadge" class="user-badge" hidden></span>
@@ -23,6 +23,7 @@
     <nav class="tabs" role="tablist" id="mainTabs">
       <button type="button" class="active" data-tab="dashboard" data-roles="admin,manager">Обзор</button>
       <button type="button" data-tab="sales" data-roles="admin,manager,staff">Продажи</button>
+      <button type="button" data-tab="warehouse" data-roles="admin,manager,staff">Склад</button>
       <button type="button" data-tab="operations" data-roles="admin,manager">Операции</button>
       <button type="button" data-tab="payroll" data-roles="admin,manager,staff">Зарплаты</button>
       <button type="button" data-tab="staff" data-roles="admin,manager">Сотрудники</button>
@@ -81,6 +82,86 @@
         </div>
         <div id="salesTable"></div>
         <p id="salesTotal" class="hint"></p>
+      </div>
+    </section>
+
+    <section id="panel-warehouse" class="panel" data-roles="admin,manager,staff">
+      <div class="box">
+        <h2>Списание со склада</h2>
+        <p class="hint">Взяли товар — сразу оформите списание: так видно остатки и кто что забрал. Приход на склад вносит управляющий.</p>
+        <form id="whIssueForm" class="row">
+          <label>Позиция
+            <select name="item_id" id="whIssueItem" required></select>
+          </label>
+          <label>Количество
+            <input type="number" name="quantity" min="0.001" step="any" required>
+          </label>
+          <label>Дата
+            <input type="date" name="occurred_on" required>
+          </label>
+          <label>Куда / для чего
+            <input name="destination" placeholder="Кафе, баня, столовая…" required>
+          </label>
+          <label id="whIssueEmpLabel" hidden>Забрал (сотрудник)
+            <select name="employee_id" id="whIssueEmployee"></select>
+          </label>
+          <label style="grid-column: 1 / -1">Комментарий
+            <textarea name="note" placeholder="Необязательно"></textarea>
+          </label>
+          <button type="submit" class="btn">Списать</button>
+        </form>
+        <p class="error" id="whIssueError" hidden></p>
+      </div>
+      <div class="box" data-roles="admin,manager" id="whReceiptBox">
+        <h2>Приход на склад</h2>
+        <form id="whReceiptForm" class="row">
+          <label>Позиция
+            <select name="item_id" id="whReceiptItem" required></select>
+          </label>
+          <label>Количество
+            <input type="number" name="quantity" min="0.001" step="any" required>
+          </label>
+          <label>Дата
+            <input type="date" name="occurred_on" required>
+          </label>
+          <label style="grid-column: 1 / -1">Комментарий
+            <textarea name="note" placeholder="Поставка, накладная…"></textarea>
+          </label>
+          <button type="submit" class="btn">Оприходовать</button>
+        </form>
+        <p class="error" id="whReceiptError" hidden></p>
+      </div>
+      <div class="box" data-roles="admin,manager" id="whItemBox">
+        <h2>Новая позиция номенклатуры</h2>
+        <form id="whItemForm" class="row">
+          <label>Название
+            <input name="name" required>
+          </label>
+          <label>Ед. изм.
+            <input name="unit_label" value="шт">
+          </label>
+          <label>Мин. остаток (оповещение)
+            <input type="number" name="min_stock" min="0" step="any" value="0">
+          </label>
+          <button type="submit" class="btn secondary">Добавить</button>
+        </form>
+      </div>
+      <div class="box">
+        <h2>Остатки</h2>
+        <div id="whStockTable"></div>
+      </div>
+      <div class="box">
+        <h2>Журнал движений</h2>
+        <div class="filters">
+          <label>С
+            <input type="date" id="whFilterFrom">
+          </label>
+          <label>По
+            <input type="date" id="whFilterTo">
+          </label>
+          <button type="button" class="btn secondary" id="whRefresh">Обновить</button>
+        </div>
+        <div id="whMoveTable"></div>
       </div>
     </section>
 

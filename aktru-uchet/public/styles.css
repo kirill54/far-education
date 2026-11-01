@@ -238,6 +238,13 @@ th {
   font-size: 13px;
   margin-top: 8px;
 }
+tr.low-stock td {
+  background: #fff4e5;
+}
+tr.low-stock .stock-num {
+  color: #b42318;
+  font-weight: 700;
+}
 @media (max-width: 640px) {
   form.row {
     grid-template-columns: 1fr;

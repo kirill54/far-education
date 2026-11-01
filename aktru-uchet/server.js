@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { openDb, unitBySlug } from './db.js';
 import { generateToken, hashToken, isManager, resolveUser } from './auth.js';
+import { listItemsWithStock, stockForItem } from './warehouse.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3847;
@@ -568,6 +569,179 @@ function prorateBase(monthlyBase, from, to) {
   if (days <= 0 || !monthlyBase) return 0;
   return Math.round(((monthlyBase * days) / 30) * 100) / 100;
 }
+
+app.get('/api/warehouse/items', requireAuth, (req, res) => {
+  const all = req.query.all === '1' && isManager(req.user);
+  res.json(listItemsWithStock(db, !all));
+});
+
+app.post('/api/warehouse/items', requireAuth, requireManager, (req, res) => {
+  const { name, unit_label, min_stock, sort_order } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'Нужно название позиции' });
+  try {
+    const info = db
+      .prepare(
+        `INSERT INTO warehouse_items (name, unit_label, min_stock, sort_order)
+         VALUES (?, ?, ?, ?)`,
+      )
+      .run(
+        String(name).trim(),
+        (unit_label || 'шт').trim(),
+        Number(min_stock) || 0,
+        Number(sort_order) || 0,
+      );
+    res.status(201).json({ id: info.lastInsertRowid });
+  } catch {
+    res.status(409).json({ error: 'Такая позиция уже есть' });
+  }
+});
+
+app.patch('/api/warehouse/items/:id', requireAuth, requireManager, (req, res) => {
+  const id = Number(req.params.id);
+  const existing = db.prepare('SELECT * FROM warehouse_items WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Не найдено' });
+  const body = req.body || {};
+  db.prepare(
+    `UPDATE warehouse_items SET name = ?, unit_label = ?, min_stock = ?, sort_order = ?, active = ?
+     WHERE id = ?`,
+  ).run(
+    body.name !== undefined ? String(body.name).trim() : existing.name,
+    body.unit_label !== undefined ? String(body.unit_label).trim() : existing.unit_label,
+    body.min_stock !== undefined ? Number(body.min_stock) : existing.min_stock,
+    body.sort_order !== undefined ? Number(body.sort_order) : existing.sort_order,
+    body.active !== undefined ? (body.active ? 1 : 0) : existing.active,
+    id,
+  );
+  res.json({ ok: true });
+});
+
+app.get('/api/warehouse/movements', requireAuth, (req, res) => {
+  const { from, to, item_id, kind, employee_id } = req.query;
+  const clauses = [];
+  const params = [];
+
+  if (req.user.role === 'staff') {
+    if (req.user.employee_id) {
+      clauses.push('(m.employee_id = ? OR m.created_by_user_id = ?)');
+      params.push(req.user.employee_id, req.user.id > 0 ? req.user.id : -1);
+    } else if (req.user.id > 0) {
+      clauses.push('m.created_by_user_id = ?');
+      params.push(req.user.id);
+    }
+  } else if (employee_id) {
+    clauses.push('m.employee_id = ?');
+    params.push(Number(employee_id));
+  }
+  if (from) {
+    clauses.push('m.occurred_on >= ?');
+    params.push(from);
+  }
+  if (to) {
+    clauses.push('m.occurred_on <= ?');
+    params.push(to);
+  }
+  if (item_id) {
+    clauses.push('m.item_id = ?');
+    params.push(Number(item_id));
+  }
+  if (kind) {
+    clauses.push('m.kind = ?');
+    params.push(kind);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const rows = db
+    .prepare(
+      `SELECT m.id, m.item_id, w.name AS item_name, w.unit_label, m.kind, m.quantity,
+              m.occurred_on, m.employee_id, e.name AS employee_name, m.taken_by,
+              m.destination, m.note, m.created_at, u.name AS created_by_name
+       FROM warehouse_movements m
+       JOIN warehouse_items w ON w.id = m.item_id
+       LEFT JOIN employees e ON e.id = m.employee_id
+       LEFT JOIN users u ON u.id = m.created_by_user_id
+       ${where}
+       ORDER BY m.occurred_on DESC, m.id DESC
+       LIMIT 500`,
+    )
+    .all(...params);
+  res.json(rows);
+});
+
+app.post('/api/warehouse/movements', requireAuth, (req, res) => {
+  const {
+    item_id,
+    kind,
+    quantity,
+    occurred_on,
+    employee_id,
+    taken_by,
+    destination,
+    note,
+  } = req.body || {};
+
+  if (!item_id || !kind || !quantity || !occurred_on) {
+    return res.status(400).json({ error: 'Нужны item_id, kind, quantity, occurred_on' });
+  }
+  if (!['receipt', 'issue'].includes(kind)) {
+    return res.status(400).json({ error: 'kind: receipt или issue' });
+  }
+  if (kind === 'receipt' && !isManager(req.user)) {
+    return res.status(403).json({ error: 'Приход на склад вносит управляющий' });
+  }
+
+  const qty = Number(quantity);
+  if (!Number.isFinite(qty) || qty <= 0) {
+    return res.status(400).json({ error: 'Количество должно быть больше 0' });
+  }
+
+  const item = db.prepare('SELECT * FROM warehouse_items WHERE id = ? AND active = 1').get(item_id);
+  if (!item) return res.status(400).json({ error: 'Позиция не найдена' });
+
+  if (kind === 'issue') {
+    const { balance } = stockForItem(db, item.id);
+    if (qty > balance + 1e-9) {
+      return res.status(400).json({
+        error: `Недостаточно на складе: остаток ${balance} ${item.unit_label}`,
+      });
+    }
+  }
+
+  let empId = employee_id ? Number(employee_id) : null;
+  let takenBy = (taken_by || '').trim();
+  if (req.user.role === 'staff') {
+    if (req.user.employee_id) empId = req.user.employee_id;
+    if (!takenBy) takenBy = req.user.name;
+  }
+  if (kind === 'issue' && !destination?.trim() && !note?.trim()) {
+    return res.status(400).json({ error: 'Укажите куда (кафе, баня…) или комментарий' });
+  }
+
+  const creatorId = req.user.id > 0 ? req.user.id : null;
+  const info = db
+    .prepare(
+      `INSERT INTO warehouse_movements
+         (item_id, kind, quantity, occurred_on, employee_id, taken_by, destination, note, created_by_user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      item.id,
+      kind,
+      qty,
+      occurred_on,
+      empId,
+      takenBy,
+      (destination || '').trim(),
+      (note || '').trim(),
+      creatorId,
+    );
+  res.status(201).json({ id: info.lastInsertRowid });
+});
+
+app.delete('/api/warehouse/movements/:id', requireAuth, requireManager, (req, res) => {
+  const id = Number(req.params.id);
+  const info = db.prepare('DELETE FROM warehouse_movements WHERE id = ?').run(id);
+  if (info.changes === 0) return res.status(404).json({ error: 'Не найдено' });
+  res.json({ ok: true });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 

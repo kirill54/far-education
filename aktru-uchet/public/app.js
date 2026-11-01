@@ -4,6 +4,7 @@ let me = null;
 let units = [];
 let categories = [];
 let employees = [];
+let warehouseItems = [];
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
@@ -82,11 +83,9 @@ function applyRoleUI() {
   if (firstVisible && !document.querySelector('.panel.active:not([hidden])')) {
     firstVisible.click();
   }
-  const empLabel = document.getElementById('salesEmpLabel');
-  if (me?.is_manager) {
-    empLabel.hidden = false;
-  } else {
-    empLabel.hidden = true;
+  for (const id of ['salesEmpLabel', 'whIssueEmpLabel']) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !me?.is_manager;
   }
 }
 
@@ -119,6 +118,7 @@ function fillUnitSelects() {
 
 function fillEmployeeSelects() {
   const salesSel = document.getElementById('salesEmployee');
+  const whEmpSel = document.getElementById('whIssueEmployee');
   const userSel = document.getElementById('userEmployee');
   if (salesSel) {
     salesSel.innerHTML = '';
@@ -127,6 +127,15 @@ function fillEmployeeSelects() {
       opt.value = e.id;
       opt.textContent = `${e.name} (${e.unit_name})`;
       salesSel.appendChild(opt);
+    }
+  }
+  if (whEmpSel) {
+    whEmpSel.innerHTML = '';
+    for (const e of employees) {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = e.name;
+      whEmpSel.appendChild(opt);
     }
   }
   if (userSel) {
@@ -380,6 +389,95 @@ async function calcPayroll() {
   document.getElementById('payTable').innerHTML = html;
 }
 
+function fillWarehouseItemSelects() {
+  for (const id of ['whIssueItem', 'whReceiptItem']) {
+    const sel = document.getElementById(id);
+    if (!sel) continue;
+    sel.innerHTML = '';
+    for (const it of warehouseItems) {
+      const opt = document.createElement('option');
+      opt.value = it.id;
+      const bal = it.stock_balance ?? 0;
+      opt.textContent = `${it.name} (ост. ${bal} ${it.unit_label})`;
+      sel.appendChild(opt);
+    }
+  }
+}
+
+async function loadWarehouseItems() {
+  warehouseItems = await api('/api/warehouse/items');
+  fillWarehouseItemSelects();
+  const wrap = document.getElementById('whStockTable');
+  if (!wrap) return;
+  if (!warehouseItems.length) {
+    wrap.innerHTML = '<p class="hint">Нет позиций — управляющий добавит номенклатуру.</p>';
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Позиция</th><th>Ед.</th><th class="num">Остаток</th><th class="num">Мин.</th>
+  </tr></thead><tbody>`;
+  for (const it of warehouseItems) {
+    const cls = it.below_min ? ' class="low-stock"' : '';
+    html += `<tr${cls}>
+      <td>${escapeHtml(it.name)}</td>
+      <td>${escapeHtml(it.unit_label)}</td>
+      <td class="num stock-num">${it.stock_balance}</td>
+      <td class="num">${it.min_stock || '—'}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderWhMoveTable(rows, canDelete) {
+  if (!rows.length) return '<p class="hint">Движений пока нет.</p>';
+  let html = `<table><thead><tr>
+    <th>Дата</th><th>Позиция</th><th>Тип</th><th class="num">Кол-во</th>
+    <th>Кто</th><th>Куда</th><th>Комментарий</th>${canDelete ? '<th></th>' : ''}
+  </tr></thead><tbody>`;
+  for (const m of rows) {
+    const who = m.employee_name || m.taken_by || m.created_by_name || '—';
+    html += `<tr>
+      <td>${m.occurred_on}</td>
+      <td>${escapeHtml(m.item_name)}</td>
+      <td>${m.kind === 'receipt' ? 'Приход' : 'Списание'}</td>
+      <td class="num">${m.quantity} ${escapeHtml(m.unit_label)}</td>
+      <td>${escapeHtml(who)}</td>
+      <td>${escapeHtml(m.destination || '—')}</td>
+      <td>${escapeHtml(m.note || '')}</td>`;
+    if (canDelete) {
+      html += `<td><button type="button" class="btn danger" data-del-wh="${m.id}">×</button></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+async function loadWarehouseMovements() {
+  const q = new URLSearchParams();
+  const from = document.getElementById('whFilterFrom')?.value;
+  const to = document.getElementById('whFilterTo')?.value;
+  if (from) q.set('from', from);
+  if (to) q.set('to', to);
+  const rows = await api(`/api/warehouse/movements?${q}`);
+  const wrap = document.getElementById('whMoveTable');
+  if (!wrap) return;
+  wrap.innerHTML = renderWhMoveTable(rows, !!me?.is_manager);
+  wrap.querySelectorAll('[data-del-wh]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Удалить запись? Остаток пересчитается.')) return;
+      try {
+        await api(`/api/warehouse/movements/${btn.dataset.delWh}`, { method: 'DELETE' });
+        await loadWarehouseItems();
+        await loadWarehouseMovements();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  });
+}
+
 async function loadUsers() {
   if (me?.role !== 'admin' && me?.id !== 0) return;
   const rows = await api('/api/users');
@@ -407,11 +505,11 @@ function applySeasonDates() {
   const y = new Date().getFullYear();
   const s = seasonRange(y);
   const to = seasonToDate(y);
-  for (const id of ['dashFrom', 'txFilterFrom', 'salesFilterFrom', 'payFrom']) {
+  for (const id of ['dashFrom', 'txFilterFrom', 'salesFilterFrom', 'payFrom', 'whFilterFrom']) {
     const el = document.getElementById(id);
     if (el) el.value = s.from;
   }
-  for (const id of ['dashTo', 'txFilterTo', 'salesFilterTo', 'payTo']) {
+  for (const id of ['dashTo', 'txFilterTo', 'salesFilterTo', 'payTo', 'whFilterTo']) {
     const el = document.getElementById(id);
     if (el) el.value = to;
   }
@@ -456,6 +554,80 @@ function bindForms() {
     } catch (e) {
       err.textContent = e.message;
       err.hidden = false;
+    }
+  });
+
+  document.getElementById('whIssueForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('whIssueError');
+    err.hidden = true;
+    const fd = new FormData(ev.target);
+    const body = {
+      item_id: Number(fd.get('item_id')),
+      kind: 'issue',
+      quantity: Number(fd.get('quantity')),
+      occurred_on: fd.get('occurred_on'),
+      destination: fd.get('destination'),
+      note: fd.get('note'),
+    };
+    if (me?.is_manager && fd.get('employee_id')) {
+      body.employee_id = Number(fd.get('employee_id'));
+    }
+    try {
+      await api('/api/warehouse/movements', { method: 'POST', body: JSON.stringify(body) });
+      ev.target.reset();
+      ev.target.querySelector('[name=occurred_on]').value = todayIso();
+      await loadWarehouseItems();
+      await loadWarehouseMovements();
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    }
+  });
+
+  document.getElementById('whReceiptForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const err = document.getElementById('whReceiptError');
+    err.hidden = true;
+    const fd = new FormData(ev.target);
+    try {
+      await api('/api/warehouse/movements', {
+        method: 'POST',
+        body: JSON.stringify({
+          item_id: Number(fd.get('item_id')),
+          kind: 'receipt',
+          quantity: Number(fd.get('quantity')),
+          occurred_on: fd.get('occurred_on'),
+          note: fd.get('note'),
+        }),
+      });
+      ev.target.reset();
+      ev.target.querySelector('[name=occurred_on]').value = todayIso();
+      await loadWarehouseItems();
+      await loadWarehouseMovements();
+    } catch (e) {
+      err.textContent = e.message;
+      err.hidden = false;
+    }
+  });
+
+  document.getElementById('whItemForm')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+    try {
+      await api('/api/warehouse/items', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: fd.get('name'),
+          unit_label: fd.get('unit_label'),
+          min_stock: Number(fd.get('min_stock')),
+        }),
+      });
+      ev.target.reset();
+      ev.target.querySelector('[name=unit_label]').value = 'шт';
+      await loadWarehouseItems();
+    } catch (e) {
+      alert(e.message);
     }
   });
 
@@ -552,6 +724,10 @@ function bindForms() {
   });
   document.getElementById('txRefresh')?.addEventListener('click', loadTxJournal);
   document.getElementById('salesRefresh')?.addEventListener('click', loadSalesJournal);
+  document.getElementById('whRefresh')?.addEventListener('click', () => {
+    loadWarehouseItems();
+    loadWarehouseMovements();
+  });
   document.getElementById('payCalc')?.addEventListener('click', calcPayroll);
   document.getElementById('paySeason')?.addEventListener('click', () => {
     const y = new Date().getFullYear();
@@ -574,10 +750,16 @@ async function bootstrap() {
     (document.querySelector('#salesForm [name=occurred_on]').value = todayIso());
   document.querySelector('#txForm [name=occurred_on]') &&
     (document.querySelector('#txForm [name=occurred_on]').value = todayIso());
+  document.querySelector('#whIssueForm [name=occurred_on]') &&
+    (document.querySelector('#whIssueForm [name=occurred_on]').value = todayIso());
+  document.querySelector('#whReceiptForm [name=occurred_on]') &&
+    (document.querySelector('#whReceiptForm [name=occurred_on]').value = todayIso());
 
   await refreshDashboard();
   if (me?.is_manager) await loadTxJournal();
   await loadSalesJournal();
+  await loadWarehouseItems();
+  await loadWarehouseMovements();
   await loadEmployees();
   await loadUsers();
   if (me?.role === 'staff') {

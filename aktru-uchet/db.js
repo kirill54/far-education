@@ -87,7 +87,53 @@ function migrate(db) {
 
     CREATE INDEX IF NOT EXISTS idx_sales_emp_date ON employee_sales(employee_id, occurred_on);
     CREATE INDEX IF NOT EXISTS idx_sales_unit_date ON employee_sales(unit_id, occurred_on);
+
+    CREATE TABLE IF NOT EXISTS warehouse_items (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      unit_label TEXT NOT NULL DEFAULT 'шт',
+      min_stock REAL NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active INTEGER NOT NULL DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS warehouse_movements (
+      id INTEGER PRIMARY KEY,
+      item_id INTEGER NOT NULL REFERENCES warehouse_items(id),
+      kind TEXT NOT NULL CHECK (kind IN ('receipt', 'issue')),
+      quantity REAL NOT NULL CHECK (quantity > 0),
+      occurred_on TEXT NOT NULL,
+      employee_id INTEGER REFERENCES employees(id),
+      taken_by TEXT NOT NULL DEFAULT '',
+      destination TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      created_by_user_id INTEGER REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_wh_mov_item ON warehouse_movements(item_id, occurred_on);
+    CREATE INDEX IF NOT EXISTS idx_wh_mov_kind ON warehouse_movements(kind);
   `);
+  seedWarehouseItems(db);
+}
+
+function seedWarehouseItems(db) {
+  const count = db.prepare('SELECT COUNT(*) AS c FROM warehouse_items').get().c;
+  if (count > 0) return;
+  const items = [
+    ['Молоко сгущённое', 'банка', 10, 1],
+    ['Сахар', 'кг', 5, 2],
+    ['Кофе молотый', 'кг', 2, 3],
+    ['Чай пакетированный', 'уп', 5, 4],
+    ['Бумажные стаканы', 'уп', 3, 5],
+    ['Салфетки', 'уп', 5, 6],
+    ['Мыло хозяйственное', 'шт', 5, 7],
+    ['Дрова', 'м³', 2, 8],
+  ];
+  const ins = db.prepare(
+    `INSERT INTO warehouse_items (name, unit_label, min_stock, sort_order) VALUES (?, ?, ?, ?)`,
+  );
+  for (const row of items) ins.run(...row);
 }
 
 function seedIfEmpty(db) {
