@@ -80,17 +80,6 @@ app.post('/api/auth/request-code', async (req, res) => {
       error: 'Этот адрес не в списке доступа. Попросите администратора добавить его.',
     });
   }
-  const recent = db
-    .prepare(
-      `SELECT created_at FROM login_codes WHERE email = ? ORDER BY id DESC LIMIT 1`,
-    )
-    .get(email);
-  if (recent) {
-    const age = Date.now() - new Date(recent.created_at + 'Z').getTime();
-    if (Number.isFinite(age) && age >= 0 && age < 30000) {
-      return res.status(429).json({ error: 'Код уже отправлен. Подождите полминуты.' });
-    }
-  }
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   db.prepare(
