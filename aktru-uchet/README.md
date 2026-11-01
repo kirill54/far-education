@@ -26,6 +26,8 @@ npm start
 2. Введите email администратора. Пока в `.env` пустой `SMTP_HOST`, код входа показывается на странице и в логе сервера. С SMTP код уходит на почту.
 3. **Сотрудники** — оклад и % премии. **Доступ** — email и роль. Чужой адрес код не получит.
 
+Демо-цифры лета 2026: `npm run seed`. Вход: `admin@aktru.local`, `manager@aktru.local`, `anna@aktru.local`, `sergey@aktru.local`, `marina@aktru.local`.
+
 **Порт занят?** `lsof -i :3847`, затем `kill <PID>`, либо `PORT=3850` в `.env`.
 
 ### Роли
