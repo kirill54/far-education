@@ -1,0 +1,24 @@
+name: aktru
+
+services:
+  uchet:
+    build: .
+    container_name: aktru-uchet
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: "3847"
+      DB_PATH: /data/aktru.db
+    volumes:
+      - aktru-data:/data
+    networks:
+      - web
+    mem_limit: 384m
+
+networks:
+  web:
+    external: true
+    name: subscrab_default
+
+volumes:
+  aktru-data:
