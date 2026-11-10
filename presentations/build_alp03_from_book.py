@@ -2,7 +2,7 @@
 """Презентация модуля 3: рисунки пособия «Школа альпинизма» и текст для озвучки.
 
 Иллюстрации вырезаются со страниц 104–139 (главы 6 и 7) и не перерисовываются.
-Заметки к слайдам — готовый текст диктора, его же читает make_alp03_video.py.
+Заметки к слайдам — готовый текст диктора, его же читает make_video.py.
 
 PDF ищется в таком порядке: аргумент командной строки, переменная ALP03_PDF,
 затем типичные пути загрузки. Сам файл пособия в репозиторий не кладётся.
@@ -10,39 +10,9 @@ PDF ищется в таком порядке: аргумент командно
 
 from __future__ import annotations
 
-import io
-import math
-import os
-import sys
-from dataclasses import dataclass, field
-from pathlib import Path
+from deck import GOLD, GREEN, RED, ROOT, UPLOADS, Module, Slide, build
 
-import pymupdf
-from PIL import Image, ImageDraw
-from pptx import Presentation
-from pptx.dml.color import RGBColor
-from pptx.enum.shapes import MSO_SHAPE
-from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
-from pptx.util import Inches, Pt
-
-FONT = "Arial"
-
-DEEP = RGBColor(0x07, 0x1E, 0x30)
-NAVY = RGBColor(0x0B, 0x2F, 0x4A)
-PANEL = RGBColor(0x12, 0x3A, 0x5A)
-GOLD = RGBColor(0xFF, 0xCF, 0x3F)
-GREEN = RGBColor(0x7C, 0xC1, 0x4E)
-RED = RGBColor(0xE5, 0x48, 0x4D)
-WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-ICE = RGBColor(0xC9, 0xDA, 0xE8)
-MUTED = RGBColor(0x8F, 0xA8, 0xBC)
-
-ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "ALP-03_laviny-naglyadno.pptx"
-
-SLIDE_W = Inches(13.333)
-SLIDE_H = Inches(7.5)
-PX_W, PX_H = 1920, 1080
 
 # book page, clip in PDF points (origin top-left)
 CROPS: dict[str, tuple[int, tuple[float, float, float, float]]] = {
@@ -79,27 +49,17 @@ SECTIONS = {
     5: ("05", "Высота", GREEN),
 }
 
-
-@dataclass
-class Slide:
-    kind: str
-    section: int = 0
-    title: str = ""
-    image: str = ""
-    page: str = ""
-    items: list[str] = field(default_factory=list)
-    warning: str = ""
-    caption: str = ""
-    narration: str = ""
-    extra: dict = field(default_factory=dict)
-
-
 SLIDES: list[Slide] = [
     Slide(
         "cover",
+        title="Лавины\nи высота",
         image="bezengi",
         page="112",
         caption="Лавина в Безенги, Кавказ",
+        extra={
+            "subtitle": "Как читать снег, погоду и рельеф —\nи как горы действуют на человека",
+            "footer": "Схемы и фото — из пособия «Школа альпинизма», главы 6–7.\nНе допуск и не аттестация.",
+        },
         narration=(
             "Здравствуйте! Это третий модуль курса «Школа альпинизма». Он посвящён лавинам и тому, "
             "как высокогорная среда действует на человека. Все схемы и фотографии в этом уроке взяты "
@@ -517,6 +477,7 @@ SLIDES: list[Slide] = [
     Slide(
         "chapter",
         section=5,
+        title="Высота и человек",
         image="ch7",
         page="122",
         caption="«Райские ночевки», ущелье Адыр-су, Кавказ",
@@ -643,400 +604,17 @@ SLIDES: list[Slide] = [
 ]
 
 
-def find_pdf() -> Path:
-    candidates = []
-    if len(sys.argv) > 1:
-        candidates.append(Path(sys.argv[1]))
-    if os.environ.get("ALP03_PDF"):
-        candidates.append(Path(os.environ["ALP03_PDF"]))
-    candidates.extend(
-        [
-            Path("/home/ubuntu/.cursor/projects/agent-repos-far-education/uploads/ALP_Module_03__1__35db.pdf"),
-            ROOT / "ALP_Module_03.pdf",
-        ]
-    )
-    for path in candidates:
-        if path.is_file():
-            return path
-    raise SystemExit("Не найден PDF модуля 3. Передайте путь аргументом или ALP03_PDF.")
-
-
-def crop_page(doc: pymupdf.Document, name: str) -> Image.Image:
-    book, (x0, y0, x1, y1) = CROPS[name]
-    dpi = 300 if name in PHOTOS else 200
-    pix = doc[book - 94].get_pixmap(dpi=dpi, clip=pymupdf.Rect(x0, y0, x1, y1), alpha=False)
-    return Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-
-
-def trim_margin(im: Image.Image, thresh: int = 247, pad: int = 10) -> Image.Image:
-    """Срезает внешние почти белые поля. Внутренние просветы не трогает."""
-    w, h = im.size
-    px = im.load()
-
-    def blank(xs, ys) -> bool:
-        return all(min(px[x, y]) >= thresh for x in xs for y in ys)
-
-    top = 0
-    while top < h * 0.22 and blank(range(0, w, 4), [top]):
-        top += 1
-    bot = h - 1
-    while bot > h * 0.78 and blank(range(0, w, 4), [bot]):
-        bot -= 1
-    left = 0
-    while left < w * 0.18 and blank([left], range(0, h, 4)):
-        left += 1
-    right = w - 1
-    while right > w * 0.82 and blank([right], range(0, h, 4)):
-        right -= 1
-    box = (max(0, left - pad), max(0, top - pad), min(w, right + pad + 1), min(h, bot + pad + 1))
-    if box[2] - box[0] < 40 or box[3] - box[1] < 40:
-        return im
-    return im.crop(box)
-
-
-def cover_px(im: Image.Image, w: int, h: int, ax=0.5, ay=0.5) -> Image.Image:
-    scale = max(w / im.width, h / im.height)
-    nw, nh = math.ceil(im.width * scale), math.ceil(im.height * scale)
-    big = im.resize((nw, nh), Image.Resampling.LANCZOS)
-    left = int((nw - w) * ax)
-    top = int((nh - h) * ay)
-    return big.crop((left, top, left + w, top + h))
-
-
-def shade(im: Image.Image, side: str = "left", strength: float = 0.88, reach: float = 0.62) -> Image.Image:
-    """Затемняет фото градиентом, чтобы поверх читался белый текст."""
-    w, h = im.size
-    mask = Image.new("L", (w, h), 0)
-    d = ImageDraw.Draw(mask)
-    if side in ("left", "right"):
-        stop = int(w * reach)
-        for i in range(stop):
-            t = 1 - i / stop
-            x = i if side == "left" else w - 1 - i
-            d.line([(x, 0), (x, h)], fill=int(255 * strength * (t ** 0.8)))
-    else:
-        start = int(h * (1 - reach))
-        for y in range(start, h):
-            t = (y - start) / (h - start)
-            d.line([(0, y), (w, y)], fill=int(255 * strength * (t ** 0.9)))
-    dark = Image.new("RGB", (w, h), (7, 30, 48))
-    return Image.composite(dark, im, mask)
-
-
-def to_stream(im: Image.Image, photo: bool) -> io.BytesIO:
-    buf = io.BytesIO()
-    if photo:
-        im.save(buf, "JPEG", quality=86, optimize=True)
-    else:
-        im.save(buf, "PNG", optimize=True)
-    buf.seek(0)
-    return buf
-
-
-def shape(slide, x, y, w, h, fill, kind=MSO_SHAPE.RECTANGLE, radius=None):
-    shp = slide.shapes.add_shape(kind, x, y, w, h)
-    shp.fill.solid()
-    shp.fill.fore_color.rgb = fill
-    shp.line.fill.background()
-    shp.shadow.inherit = False
-    if radius is not None:
-        shp.adjustments[0] = radius
-    return shp
-
-
-def text(slide, x, y, w, h, s, size, bold=False, color=WHITE, align=PP_ALIGN.LEFT,
-         anchor=MSO_ANCHOR.TOP, spacing=1.0):
-    box = slide.shapes.add_textbox(x, y, w, h)
-    tf = box.text_frame
-    tf.word_wrap = True
-    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
-    tf.vertical_anchor = anchor
-    for i, line in enumerate(s.split("\n")):
-        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
-        p.alignment = align
-        p.line_spacing = spacing
-        r = p.add_run()
-        r.text = line
-        r.font.name = FONT
-        r.font.size = Pt(size)
-        r.font.bold = bold
-        r.font.color.rgb = color
-    return box
-
-
-def lines_needed(s: str, width_in: float, size: int) -> int:
-    per_line = max(8, int(width_in * 72 / (size * 0.53)))
-    words, lines, cur = s.split(), 1, 0
-    for word in words:
-        add = len(word) + (1 if cur else 0)
-        if cur + add > per_line:
-            lines += 1
-            cur = len(word)
-        else:
-            cur += add
-    return lines
-
-
-def numbered(slide, x, y, w, items, accent, size=19, gap=0.28, color=WHITE, start=1):
-    """Пункты с номером в цветном круге. Возвращает нижнюю границу."""
-    dot = Inches(0.46)
-    for i, item in enumerate(items, start=start):
-        circle = shape(slide, x, y, dot, dot, accent, MSO_SHAPE.OVAL)
-        tf = circle.text_frame
-        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
-        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-        p = tf.paragraphs[0]
-        p.alignment = PP_ALIGN.CENTER
-        r = p.add_run()
-        r.text = str(i)
-        r.font.name = FONT
-        r.font.size = Pt(16)
-        r.font.bold = True
-        r.font.color.rgb = DEEP
-        tx = x + dot + Inches(0.22)
-        tw = w - dot - Inches(0.22)
-        n = lines_needed(item, tw / 914400, size)
-        th = Inches(n * size * 1.22 / 72)
-        text(slide, tx, y + Inches(0.03), tw, th, item, size, False, color, spacing=1.05)
-        y += max(th, dot) + Inches(gap)
-    return y
-
-
-def label(slide, section: int, x=Inches(0.6), y=Inches(0.42), on_photo=False):
-    num, name, accent = SECTIONS[section]
-    shape(slide, x, y + Inches(0.04), Inches(0.08), Inches(0.26), accent)
-    text(slide, x + Inches(0.2), y, Inches(8), Inches(0.34), f"{num}  ·  {name.upper()}", 13, True, accent)
-
-
-def source(slide, page: str, index: int, total: int, light=False):
-    y = SLIDE_H - Inches(0.45)
-    color = ICE if light else MUTED
-    if page:
-        text(slide, Inches(0.6), y, Inches(8), Inches(0.3), f"Пособие «Школа альпинизма», с. {page}", 11, False, color)
-    text(slide, SLIDE_W - Inches(1.6), y, Inches(1.0), Inches(0.3), f"{index:02d} / {total}", 11, True, color,
-         align=PP_ALIGN.RIGHT)
-
-
-def warning(slide, x, y, w, s):
-    pill = shape(slide, x, y, w, Inches(0.56), RED, MSO_SHAPE.ROUNDED_RECTANGLE, 0.5)
-    tf = pill.text_frame
-    tf.margin_left = tf.margin_right = Inches(0.15)
-    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
-    p = tf.paragraphs[0]
-    p.alignment = PP_ALIGN.CENTER
-    r = p.add_run()
-    r.text = s
-    r.font.name = FONT
-    r.font.size = Pt(14)
-    r.font.bold = True
-    r.font.color.rgb = WHITE
-
-
-def dark(slide):
-    fill = slide.background.fill
-    fill.solid()
-    fill.fore_color.rgb = DEEP
-
-
-def full_photo(slide, im: Image.Image, side="left", strength=0.88, reach=0.62, ax=0.5, ay=0.5):
-    bg = shade(cover_px(im, PX_W, PX_H, ax, ay), side, strength, reach)
-    slide.shapes.add_picture(to_stream(bg, True), 0, 0, SLIDE_W, SLIDE_H)
-
-
-def add_figure(slide, s: Slide, im: Image.Image, index, total):
-    dark(slide)
-    accent = SECTIONS[s.section][2]
-    label(slide, s.section)
-    text(slide, Inches(0.6), Inches(0.82), Inches(12.2), Inches(0.7), s.title, 32, True, WHITE)
-    stream = to_stream(im, s.image in PHOTOS)
-    aspect = im.width / im.height
-    top = Inches(1.75)
-    pad = Inches(0.16)
-    if aspect >= 1.9:
-        w, h = SLIDE_W - Inches(1.2), Inches(3.55)
-        shape(slide, Inches(0.6), top, w, h, WHITE, MSO_SHAPE.ROUNDED_RECTANGLE, 0.03)
-        fit_picture(slide, stream, im.size, Inches(0.6) + pad, top + pad, w - pad * 2, h - pad * 2)
-        y = top + h + Inches(0.35)
-        n = len(s.items)
-        col_gap = Inches(0.3)
-        col_w = (SLIDE_W - Inches(1.2) - col_gap * (n - 1)) // n
-        for i, item in enumerate(s.items):
-            numbered(slide, Inches(0.6) + i * (col_w + col_gap), y, col_w, [item], accent, size=17, start=i + 1)
-    else:
-        w, h = Inches(7.4), SLIDE_H - top - Inches(0.65)
-        shape(slide, Inches(0.6), top, w, h, WHITE, MSO_SHAPE.ROUNDED_RECTANGLE, 0.03)
-        fit_picture(slide, stream, im.size, Inches(0.6) + pad, top + pad, w - pad * 2, h - pad * 2)
-        tx = Inches(0.6) + w + Inches(0.5)
-        tw = SLIDE_W - tx - Inches(0.6)
-        numbered(slide, tx, top + Inches(0.15), tw, s.items, accent, size=19)
-        if s.warning:
-            warning(slide, tx, top + h - Inches(0.56), tw, s.warning)
-    source(slide, s.page, index, total)
-
-
-def fit_picture(slide, stream, size, x, y, w, h):
-    iw, ih = size
-    scale = min(w / iw, h / ih)
-    pw, ph = int(iw * scale), int(ih * scale)
-    return slide.shapes.add_picture(stream, x + (w - pw) // 2, y + (h - ph) // 2, pw, ph)
-
-
-def add_photo(slide, s: Slide, im: Image.Image, index, total):
-    side = s.extra.get("side", "left")
-    full_photo(slide, im, side, 0.9, 0.66)
-    accent = SECTIONS[s.section][2]
-    x = Inches(0.6) if side == "left" else SLIDE_W - Inches(6.4)
-    label(slide, s.section, x=x)
-    text(slide, x, Inches(0.85), Inches(6.0), Inches(1.4), s.title, 36, True, WHITE, spacing=0.95)
-    numbered(slide, x, Inches(2.75), Inches(5.6), s.items, accent, size=20, gap=0.32)
-    if s.caption:
-        text(slide, x, SLIDE_H - Inches(0.8), Inches(5.8), Inches(0.3), s.caption, 12, True, ICE)
-    source(slide, s.page, index, total, light=True)
-
-
-def add_cover(slide, s: Slide, im: Image.Image):
-    full_photo(slide, im, "left", 0.92, 0.72, ax=0.55)
-    shape(slide, Inches(0.6), Inches(0.75), Inches(0.9), Inches(0.07), GOLD)
-    text(slide, Inches(0.6), Inches(1.0), Inches(7), Inches(0.4), "ШКОЛА АЛЬПИНИЗМА  ·  МОДУЛЬ 3", 15, True, GOLD)
-    text(slide, Inches(0.6), Inches(1.6), Inches(7.2), Inches(2.4), "Лавины\nи высота", 66, True, WHITE, spacing=0.92)
-    text(slide, Inches(0.6), Inches(4.05), Inches(6.2), Inches(1.0),
-         "Как читать снег, погоду и рельеф —\nи как горы действуют на человека", 21, False, ICE, spacing=1.1)
-    text(slide, Inches(0.6), Inches(6.35), Inches(7), Inches(0.6),
-         "Схемы и фото — из пособия «Школа альпинизма», главы 6–7.\nНе допуск и не аттестация.", 12, False, ICE)
-    text(slide, SLIDE_W - Inches(4.6), SLIDE_H - Inches(0.5), Inches(4.0), Inches(0.3), s.caption, 11, False, ICE,
-         align=PP_ALIGN.RIGHT)
-
-
-def add_divider(slide, s: Slide, index, total):
-    dark(slide)
-    num, name, accent = SECTIONS[s.section]
-    shape(slide, 0, 0, Inches(0.18), SLIDE_H, accent)
-    text(slide, Inches(0.9), Inches(0.9), Inches(6), Inches(3.2), num, 190, True, accent)
-    text(slide, Inches(0.95), Inches(3.75), Inches(7), Inches(0.4), "ЧАСТЬ", 15, True, MUTED)
-    text(slide, Inches(0.95), Inches(4.1), Inches(7.5), Inches(1.0), name, 46, True, WHITE)
-    y = Inches(1.6)
-    for topic in s.extra["topics"]:
-        shape(slide, Inches(8.2), y, Inches(4.5), Inches(1.15), PANEL, MSO_SHAPE.ROUNDED_RECTANGLE, 0.12)
-        shape(slide, Inches(8.2), y, Inches(0.09), Inches(1.15), accent)
-        text(slide, Inches(8.55), y, Inches(4.0), Inches(1.15), topic, 20, True, WHITE, anchor=MSO_ANCHOR.MIDDLE)
-        y += Inches(1.4)
-    source(slide, "", index, total)
-
-
-def add_chapter(slide, s: Slide, im: Image.Image, index, total):
-    dark(slide)
-    accent = SECTIONS[s.section][2]
-    bar = Inches(0.9)
-    fit_picture(slide, to_stream(im, True), im.size, 0, 0, SLIDE_W, SLIDE_H - bar)
-    shape(slide, 0, SLIDE_H - bar, SLIDE_W, bar, DEEP)
-    shape(slide, 0, SLIDE_H - bar, SLIDE_W, Inches(0.05), accent)
-    text(slide, Inches(0.6), SLIDE_H - bar, Inches(6), bar, "05  ·  ВЫСОТА И ЧЕЛОВЕК", 15, True, accent,
-         anchor=MSO_ANCHOR.MIDDLE)
-    text(slide, Inches(5.2), SLIDE_H - bar, Inches(6.2), bar, f"{s.caption} · с. {s.page}", 12, False, ICE,
-         align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE)
-    text(slide, SLIDE_W - Inches(1.6), SLIDE_H - bar, Inches(1.0), bar, f"{index:02d} / {total}", 11, True, MUTED,
-         align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE)
-
-
-def add_numbers(slide, s: Slide, index, total):
-    dark(slide)
-    accent = SECTIONS[s.section][2]
-    label(slide, s.section)
-    text(slide, Inches(0.6), Inches(0.82), Inches(12.2), Inches(0.7), s.title, 32, True, WHITE)
-    cards = s.extra["cards"]
-    gap = Inches(0.35)
-    cw = (SLIDE_W - Inches(1.2) - gap * 2) // 3
-    y, h = Inches(2.0), Inches(4.1)
-    for i, (big, small) in enumerate(cards):
-        x = Inches(0.6) + i * (cw + gap)
-        shape(slide, x, y, cw, h, PANEL, MSO_SHAPE.ROUNDED_RECTANGLE, 0.06)
-        shape(slide, x + Inches(0.4), y + Inches(0.5), Inches(0.7), Inches(0.07), accent)
-        text(slide, x + Inches(0.4), y + Inches(0.85), cw - Inches(0.8), Inches(1.6), big, 40, True, accent,
-             spacing=0.95)
-        text(slide, x + Inches(0.4), y + Inches(2.55), cw - Inches(0.8), Inches(1.3), small, 20, False, WHITE,
-             spacing=1.1)
-    source(slide, s.page, index, total)
-
-
-def add_flags(slide, s: Slide, index, total):
-    dark(slide)
-    label(slide, s.section)
-    text(slide, Inches(0.6), Inches(0.82), Inches(12.2), Inches(0.7), s.title, 32, True, WHITE)
-    flags = s.extra["flags"]
-    cols, rows = 2, 5
-    gap_x, gap_y = Inches(0.3), Inches(0.16)
-    cw = (SLIDE_W - Inches(1.2) - gap_x) // cols
-    ch = Inches(0.62)
-    top = Inches(1.75)
-    for i, flag in enumerate(flags):
-        c, r = divmod(i, rows)
-        x = Inches(0.6) + c * (cw + gap_x)
-        y = top + r * (ch + gap_y)
-        shape(slide, x, y, cw, ch, PANEL, MSO_SHAPE.ROUNDED_RECTANGLE, 0.18)
-        shape(slide, x, y, Inches(0.09), ch, RED)
-        text(slide, x + Inches(0.35), y, cw - Inches(0.5), ch, flag, 18, True, WHITE, anchor=MSO_ANCHOR.MIDDLE)
-    cy = top + rows * (ch + gap_y) + Inches(0.15)
-    shape(slide, Inches(0.6), cy, SLIDE_W - Inches(1.2), Inches(0.75), GOLD, MSO_SHAPE.ROUNDED_RECTANGLE, 0.2)
-    text(slide, Inches(0.95), cy, SLIDE_W - Inches(1.9), Inches(0.75), s.extra["callout"], 19, True, DEEP,
-         anchor=MSO_ANCHOR.MIDDLE)
-    source(slide, s.page, index, total)
-
-
-def add_final(slide, s: Slide, index, total):
-    dark(slide)
-    shape(slide, Inches(0.6), Inches(0.6), Inches(0.9), Inches(0.07), GOLD)
-    text(slide, Inches(0.6), Inches(0.85), Inches(12), Inches(0.8), s.title, 40, True, WHITE)
-    cols = s.extra["columns"]
-    gap = Inches(0.35)
-    cw = (SLIDE_W - Inches(1.2) - gap * 2) // 3
-    y, h = Inches(2.0), Inches(4.1)
-    for i, (head, accent, items) in enumerate(cols):
-        x = Inches(0.6) + i * (cw + gap)
-        shape(slide, x, y, cw, h, PANEL, MSO_SHAPE.ROUNDED_RECTANGLE, 0.06)
-        shape(slide, x, y, cw, Inches(0.09), accent)
-        text(slide, x + Inches(0.4), y + Inches(0.4), cw - Inches(0.8), Inches(0.5), head, 24, True, accent)
-        numbered(slide, x + Inches(0.4), y + Inches(1.2), cw - Inches(0.7), items, accent, size=17, gap=0.22)
-    text(slide, Inches(0.6), Inches(6.45), Inches(11), Inches(0.4),
-         "Урок не допуск, не квалификация и не официальный экзамен ФАР.", 14, True, GOLD)
-    text(slide, SLIDE_W - Inches(1.6), SLIDE_H - Inches(0.45), Inches(1.0), Inches(0.3), f"{index:02d} / {total}",
-         11, True, MUTED, align=PP_ALIGN.RIGHT)
-
-
-def main() -> None:
-    doc = pymupdf.open(find_pdf())
-    images: dict[str, Image.Image] = {}
-    for name in CROPS:
-        im = crop_page(doc, name)
-        images[name] = im if name in PHOTOS else trim_margin(im)
-
-    prs = Presentation()
-    prs.slide_width = SLIDE_W
-    prs.slide_height = SLIDE_H
-    blank = prs.slide_layouts[6]
-    total = len(SLIDES)
-    for index, s in enumerate(SLIDES, start=1):
-        slide = prs.slides.add_slide(blank)
-        im = images.get(s.image)
-        if s.kind == "cover":
-            add_cover(slide, s, im)
-        elif s.kind == "divider":
-            add_divider(slide, s, index, total)
-        elif s.kind == "chapter":
-            add_chapter(slide, s, im, index, total)
-        elif s.kind == "photo":
-            add_photo(slide, s, im, index, total)
-        elif s.kind == "numbers":
-            add_numbers(slide, s, index, total)
-        elif s.kind == "flags":
-            add_flags(slide, s, index, total)
-        elif s.kind == "final":
-            add_final(slide, s, index, total)
-        else:
-            add_figure(slide, s, im, index, total)
-        slide.notes_slide.notes_text_frame.text = s.narration
-    prs.save(OUT)
-    print(f"{total} slides -> {OUT}")
-
+MODULE = Module(
+    number="03",
+    out=OUT,
+    pdf_env="ALP03_PDF",
+    pdf_candidates=[UPLOADS / "ALP_Module_03__1__35db.pdf", ROOT / "ALP_Module_03.pdf"],
+    page_offset=-94,
+    crops=CROPS,
+    photos=PHOTOS,
+    sections=SECTIONS,
+    slides=SLIDES,
+)
 
 if __name__ == "__main__":
-    main()
+    build(MODULE)
