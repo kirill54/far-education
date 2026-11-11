@@ -84,6 +84,35 @@ def found(key: str, body: str) -> bool:
     return any(re.search(r"(?<![а-яa-z0-9])" + re.escape(norm(alt.strip())), body) for alt in key.split("|"))
 
 
+def ref_slides(ref: str) -> tuple[str, list[int]] | None:
+    """«урок 10.3, слайд 7», «урок 2.1, слайды 5, 7», «урок 3.2, слайды 6–8» → ('10.3', [7])."""
+    m = re.match(r"урок (\d+\.\d+), слайды? ([\d,–\- ]+)", ref)
+    if not m:
+        return None
+    nums: list[int] = []
+    for part in re.split(r",\s*", m[2].strip(" ,")):
+        a, _, b = part.replace("–", "-").partition("-")
+        nums += list(range(int(a), int(b or a) + 1))
+    return m[1], nums
+
+
+def ref_problem(q: dict, by_code: dict) -> str:
+    """Ссылка «Где смотреть» должна вести на слайд, где есть хотя бы один ключ вопроса."""
+    parsed = ref_slides(q.get("ref", ""))
+    if not parsed:
+        return f"ссылка не по образцу «урок X.Y, слайд N»: {q.get('ref', '')!r}"
+    code, nums = parsed
+    lesson = by_code.get(code)
+    if lesson is None:
+        return ""
+    if any(n < 1 or n > len(lesson.slides) for n in nums):
+        return f"ссылка {q['ref']!r}: в уроке {code} всего {len(lesson.slides)} слайдов"
+    body = " ".join(lesson_text(Lesson(code, "", {}, [lesson.slides[n - 1]])) for n in nums)
+    if not any(found(k, body) for k in q.get("keys", [])):
+        return f"ссылка {q['ref']!r}: на этих слайдах нет ни одного ключа вопроса"
+    return ""
+
+
 def bank_ids() -> set[int]:
     raw = BANK.read_text(encoding="utf-8")
     raw = raw[raw.index("["): raw.rindex("]") + 1]
@@ -129,9 +158,13 @@ def check(verbose: bool = False) -> int:
     if missing:
         problems.append(f"банк: не закреплены {len(missing)} вопросов: {missing[:40]}{' …' if len(missing) > 40 else ''}")
 
+    by_code = {lesson.code: lesson for lesson in LESSONS}
     for path in selected(COURSE.glob("m[0-9][0-9]/test.json")):
         for q in json.loads(path.read_text(encoding="utf-8"))["questions"]:
             verify("тесты", q["id"], q.get("l", ""), q.get("keys", []))
+            problem = ref_problem(q, by_code)
+            if problem:
+                problems.append(f"тесты: {q['id']} — {problem}")
 
     for kind, (ok, total, wait) in stats.items():
         print(f"{kind}: {total}, найдено в уроках {ok}, ждут уроков {wait}, ошибок {total - ok - wait}")

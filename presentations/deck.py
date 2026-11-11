@@ -92,6 +92,18 @@ def find_pdf(module: Module) -> Path:
     )
 
 
+IMG = ROOT / "img"
+
+
+def image_file(module: Module, name: str) -> Path | None:
+    """Перерисованная схема или заменённое фото: img/<модуль>_<имя>.png|.jpg вместо вырезки из книги."""
+    for ext in (".png", ".jpg"):
+        for path in (IMG / f"{module.number}_{name}{ext}", IMG / f"{name}{ext}"):
+            if path.is_file():
+                return path
+    return None
+
+
 def crop_page(doc: pymupdf.Document, module: Module, name: str) -> Image.Image:
     book, (x0, y0, x1, y1) = module.crops[name]
     dpi = 300 if name in module.photos else 200
@@ -510,6 +522,10 @@ class Builder:
             src = s.origin or self.m
             key = (src.number, s.image)
             if not s.image or key in images:
+                continue
+            path = image_file(src, s.image)
+            if path:
+                images[key] = Image.open(path).convert("RGB")
                 continue
             if src.number not in docs:
                 docs[src.number] = pymupdf.open(find_pdf(src))
