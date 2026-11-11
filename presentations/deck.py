@@ -389,6 +389,9 @@ class Builder:
         cw = (SLIDE_W - Inches(1.2) - gap * (n - 1)) // n
         y, h = Inches(2.0), Inches(4.1)
         big_size = s.extra.get("size", 40 if n <= 3 else 34)
+        longest = max(len(word) for big, _ in cards for word in big.split())
+        fit = int((cw - Inches(0.8)) / 12700 / (longest * 0.6))
+        big_size = max(22, min(big_size, fit))
         for i, (big, small) in enumerate(cards):
             x = Inches(0.6) + i * (cw + gap)
             shape(slide, x, y, cw, h, PANEL, MSO_SHAPE.ROUNDED_RECTANGLE, 0.06)
