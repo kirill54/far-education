@@ -54,6 +54,7 @@ class Slide:
     caption: str = ""
     narration: str = ""
     extra: dict = field(default_factory=dict)
+    origin: Module | None = None
 
 
 @dataclass
@@ -74,11 +75,12 @@ class Module:
     sections: dict[int, tuple[str, str, RGBColor]]
     slides: list[Slide]
     rotate: dict[str, int] = field(default_factory=dict)
+    kicker: str = ""
 
 
 def find_pdf(module: Module) -> Path:
     candidates = []
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 1 and sys.argv[1].lower().endswith(".pdf"):
         candidates.append(Path(sys.argv[1]))
     if os.environ.get(module.pdf_env):
         candidates.append(Path(os.environ[module.pdf_env]))
@@ -241,6 +243,9 @@ class Builder:
         self.m = module
         self.total = len(module.slides)
 
+    def is_photo(self, s: Slide) -> bool:
+        return s.image in (s.origin or self.m).photos
+
     def sec(self, s: Slide):
         return self.m.sections[s.section]
 
@@ -268,7 +273,7 @@ class Builder:
         dark(slide)
         accent = self.sec(s)[2]
         self.title(slide, s)
-        stream = to_stream(im, s.image in self.m.photos)
+        stream = to_stream(im, self.is_photo(s))
         aspect = im.width / im.height
         top = Inches(1.75)
         pad = Inches(0.16)
@@ -328,7 +333,7 @@ class Builder:
             title_w = Inches(7.2)
         shape(slide, Inches(0.6), Inches(0.75), Inches(0.9), Inches(0.07), GOLD)
         text(slide, Inches(0.6), Inches(1.0), Inches(7), Inches(0.4),
-             f"ШКОЛА АЛЬПИНИЗМА  ·  МОДУЛЬ {int(self.m.number)}", 15, True, GOLD)
+             self.m.kicker or f"ШКОЛА АЛЬПИНИЗМА  ·  МОДУЛЬ {int(self.m.number)}", 15, True, GOLD)
         text(slide, Inches(0.6), Inches(1.6), title_w, Inches(2.4), s.title, s.extra.get("size", 66), True, WHITE,
              spacing=0.92)
         text(slide, Inches(0.6), Inches(4.05), Inches(6.2), Inches(1.0), s.extra["subtitle"], 21, False, ICE,
@@ -459,11 +464,17 @@ class Builder:
              11, True, MUTED, align=PP_ALIGN.RIGHT)
 
     def build(self) -> Path:
-        doc = pymupdf.open(find_pdf(self.m))
-        images: dict[str, Image.Image] = {}
-        for name in self.m.crops:
-            im = crop_page(doc, self.m, name)
-            images[name] = im if name in self.m.photos else trim_margin(im)
+        docs: dict[str, pymupdf.Document] = {}
+        images: dict[tuple[str, str], Image.Image] = {}
+        for s in self.m.slides:
+            src = s.origin or self.m
+            key = (src.number, s.image)
+            if not s.image or key in images:
+                continue
+            if src.number not in docs:
+                docs[src.number] = pymupdf.open(find_pdf(src))
+            im = crop_page(docs[src.number], src, s.image)
+            images[key] = im if s.image in src.photos else trim_margin(im)
 
         prs = Presentation()
         prs.slide_width = SLIDE_W
@@ -471,7 +482,7 @@ class Builder:
         blank = prs.slide_layouts[6]
         for index, s in enumerate(self.m.slides, start=1):
             slide = prs.slides.add_slide(blank)
-            im = images.get(s.image)
+            im = images.get(((s.origin or self.m).number, s.image))
             if s.kind == "cover":
                 self.cover(slide, s, im)
             elif s.kind == "divider":
