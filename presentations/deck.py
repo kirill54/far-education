@@ -48,7 +48,6 @@ class Slide:
     section: int = 0
     title: str = ""
     image: str = ""
-    page: str = ""
     items: list[str] = field(default_factory=list)
     warning: str = ""
     caption: str = ""
@@ -258,8 +257,6 @@ class Builder:
         y = SLIDE_H - Inches(0.45)
         color = ICE if light else MUTED
         line = s.extra.get("src")
-        if line is None and s.page:
-            line = f"Пособие «Школа альпинизма», с. {s.page}"
         if line:
             text(slide, Inches(0.6), y, Inches(10), Inches(0.3), line, 11, False, color)
         text(slide, SLIDE_W - Inches(1.6), y, Inches(1.0), Inches(0.3), f"{index:02d} / {self.total}", 11, True,
@@ -374,7 +371,7 @@ class Builder:
         shape(slide, 0, SLIDE_H - bar, SLIDE_W, Inches(0.05), accent)
         text(slide, Inches(0.6), SLIDE_H - bar, Inches(6), bar, f"{num}  ·  {(s.title or name).upper()}", 15, True,
              accent, anchor=MSO_ANCHOR.MIDDLE)
-        text(slide, Inches(5.2), SLIDE_H - bar, Inches(6.2), bar, f"{s.caption} · с. {s.page}", 12, False, ICE,
+        text(slide, Inches(5.2), SLIDE_H - bar, Inches(6.2), bar, s.caption, 12, False, ICE,
              align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE)
         text(slide, SLIDE_W - Inches(1.6), SLIDE_H - bar, Inches(1.0), bar, f"{index:02d} / {self.total}", 11, True,
              MUTED, align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE)

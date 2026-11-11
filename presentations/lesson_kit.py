@@ -60,8 +60,7 @@ def cover(src: Module | None, image: str, title: str, subtitle: str, caption: st
             "style": "card",
             "size": size,
             "subtitle": subtitle,
-            "footer": "Схемы и фото — из пособия «Школа альпинизма».\n"
-                      "Дополнения — из открытых источников. Не допуск и не аттестация.",
+            "footer": "Не допуск и не аттестация.",
         },
     )
 
@@ -70,9 +69,8 @@ def divider(section: int, topics: list[str], narration: str) -> Slide:
     return Slide("divider", section=section, narration=narration, extra={"topics": topics})
 
 
-def terms(section: int, title: str, pairs: list[tuple[str, str]], narration: str, src: str = "", **extra) -> Slide:
-    return Slide("terms", section=section, title=title, narration=narration,
-                 extra={"terms": pairs, "src": src or "Пособие «Школа альпинизма» и открытые источники", **extra})
+def terms(section: int, title: str, pairs: list[tuple[str, str]], narration: str, **extra) -> Slide:
+    return Slide("terms", section=section, title=title, narration=narration, extra={"terms": pairs, **extra})
 
 
 def final(remember: list[str], nxt: list[str], live: list[str], narration: str) -> Slide:
@@ -88,28 +86,23 @@ def one(name: str, accent=GOLD) -> dict:
     return {1: ("01", name, accent)}
 
 
-SRC = "Пособие «Школа альпинизма» и открытые источники"
-
-
-def numbers(section: int, title: str, cards: list[tuple[str, str]], narration: str, src: str = SRC, **extra) -> Slide:
+def numbers(section: int, title: str, cards: list[tuple[str, str]], narration: str, **extra) -> Slide:
     """Две–четыре карточки: крупно число или слово, под ним пояснение."""
     return Slide("numbers", section=section, title=title, narration=narration,
-                 extra={"cards": cards, "src": src, **extra})
+                 extra={"cards": cards, **extra})
 
 
-def columns(section: int, title: str, cols: list[tuple[str, object, list[str]]], narration: str,
-            src: str = SRC) -> Slide:
+def columns(section: int, title: str, cols: list[tuple[str, object, list[str]]], narration: str) -> Slide:
     """Две–три колонки: (заголовок, цвет GOLD/GREEN/RED, 2–4 коротких пункта)."""
-    return Slide("columns", section=section, title=title, narration=narration, extra={"columns": cols, "src": src})
+    return Slide("columns", section=section, title=title, narration=narration, extra={"columns": cols})
 
 
-def flags(section: int, title: str, items: list[str], callout: str, narration: str, src: str = SRC,
-          accent=RED) -> Slide:
+def flags(section: int, title: str, items: list[str], callout: str, narration: str, accent=RED) -> Slide:
     """До десяти коротких признаков в две колонки и вывод на жёлтой плашке."""
     return Slide("flags", section=section, title=title, narration=narration,
-                 extra={"flags": items, "callout": callout, "src": src, "accent": accent})
+                 extra={"flags": items, "callout": callout, "accent": accent})
 
 
-def timeline(section: int, title: str, events: list[tuple[str, str]], narration: str, src: str = SRC) -> Slide:
+def timeline(section: int, title: str, events: list[tuple[str, str]], narration: str) -> Slide:
     """До шести шагов или дат: крупная метка и короткий текст."""
-    return Slide("timeline", section=section, title=title, narration=narration, extra={"events": events, "src": src})
+    return Slide("timeline", section=section, title=title, narration=narration, extra={"events": events})
