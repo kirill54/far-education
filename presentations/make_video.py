@@ -5,11 +5,13 @@
 по умолчанию «Денис» (модель LiveTTS). Ключ берётся из YANDEX_SPEECHKIT_API_KEY
 (и YANDEX_FOLDER_ID, если он задан).
 
-    python3 presentations/make_video.py --module 01               # всё видео модуля 1
+    python3 presentations/make_video.py --lesson 2.1              # видео урока 2.1 из presentations/lessons
+    python3 presentations/make_video.py --module 01               # всё видео исходной презентации ALP-01
     python3 presentations/make_video.py --module 03 --only 1,3,5  # проба на нескольких слайдах
     python3 presentations/make_video.py --module 02 --silent      # проверить сборку без озвучки
 
-Перед этим соберите презентацию: python3 presentations/build_alpNN_from_book.py.
+Перед этим соберите презентацию: python3 presentations/lessons.py (уроки)
+или python3 presentations/build_alpNN_from_book.py (исходные презентации по главам).
 Нужны LibreOffice (soffice), poppler (pdftoppm) и ffmpeg.
 """
 
@@ -171,7 +173,8 @@ def segment(frame: Path, audio: Path, dest: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--module", default="03", help="номер модуля: 01, 02, 03")
+    parser.add_argument("--lesson", help="номер урока из lessons.py, например 2.1 или 10.3")
+    parser.add_argument("--module", default="03", help="исходная презентация по главам: 01, 02, 03")
     parser.add_argument("--only", help="номера слайдов через запятую, например 1,3,5")
     parser.add_argument("--silent", action="store_true", help="без озвучки, паузы по длине текста")
     parser.add_argument("--voice", default=os.environ.get("YANDEX_TTS_VOICE", "denis"))
@@ -182,16 +185,27 @@ def main() -> None:
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
 
-    number = args.module.zfill(2)
-    script = f"build_alp{number}_from_book"
-    try:
-        scenario = importlib.import_module(script)
-    except ModuleNotFoundError as err:
-        raise SystemExit(f"Нет сценария presentations/{script}.py") from err
-    pptx, slides = scenario.OUT, scenario.SLIDES
+    if args.lesson:
+        lessons = importlib.import_module("lessons")
+        found = [lesson for lesson in lessons.LESSONS if lesson.code == args.lesson]
+        if not found:
+            codes = ", ".join(lesson.code for lesson in lessons.LESSONS)
+            raise SystemExit(f"Нет урока {args.lesson}. Есть: {codes}")
+        pptx, slides = found[0].out, found[0].slides
+        script = f"lessons.py {args.lesson}"
+        work = BUILD / "lessons" / pptx.stem
+    else:
+        number = args.module.zfill(2)
+        script = f"build_alp{number}_from_book"
+        try:
+            scenario = importlib.import_module(script)
+        except ModuleNotFoundError as err:
+            raise SystemExit(f"Нет сценария presentations/{script}.py") from err
+        pptx, slides = scenario.OUT, scenario.SLIDES
+        script += ".py"
+        work = BUILD / f"m{number}"
     if not pptx.exists():
-        raise SystemExit(f"Сначала соберите презентацию: python3 presentations/{script}.py")
-    work = BUILD / f"m{number}"
+        raise SystemExit(f"Сначала соберите презентацию: python3 presentations/{script}")
     work.mkdir(parents=True, exist_ok=True)
     frames = render_slides(pptx, work)
     if len(frames) != len(slides):

@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import pymupdf
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
@@ -317,6 +317,9 @@ class Builder:
         if s.extra.get("style") == "card":
             bg = cover_px(im, PX_W, PX_H).filter(ImageFilter.GaussianBlur(28))
             bg = shade(bg, "left", 0.95, 1.0)
+            bright = sum(bg.convert("L").crop((PX_W // 2, 0, PX_W, PX_H)).resize((64, 36)).getdata()) / (64 * 36)
+            if bright > 90:
+                bg = ImageEnhance.Brightness(bg).enhance(90 / bright)
             slide.shapes.add_picture(to_stream(bg, True), 0, 0, SLIDE_W, SLIDE_H)
             cw, ch = Inches(5.4), Inches(5.4) * im.height // im.width
             cx, cy = SLIDE_W - cw - Inches(0.6), (SLIDE_H - ch) // 2 - Inches(0.2)
@@ -334,10 +337,11 @@ class Builder:
         shape(slide, Inches(0.6), Inches(0.75), Inches(0.9), Inches(0.07), GOLD)
         text(slide, Inches(0.6), Inches(1.0), Inches(7), Inches(0.4),
              self.m.kicker or f"ШКОЛА АЛЬПИНИЗМА  ·  МОДУЛЬ {int(self.m.number)}", 15, True, GOLD)
-        text(slide, Inches(0.6), Inches(1.6), title_w, Inches(2.4), s.title, s.extra.get("size", 66), True, WHITE,
-             spacing=0.92)
-        text(slide, Inches(0.6), Inches(4.05), Inches(6.2), Inches(1.0), s.extra["subtitle"], 21, False, ICE,
-             spacing=1.1)
+        size = s.extra.get("size", 66)
+        text(slide, Inches(0.6), Inches(1.6), title_w, Inches(2.4), s.title, size, True, WHITE, spacing=0.92)
+        lines = s.title.count("\n") + 1
+        sub_y = max(Inches(4.05), Inches(1.85 + lines * size * 1.05 / 72))
+        text(slide, Inches(0.6), sub_y, Inches(6.2), Inches(1.0), s.extra["subtitle"], 21, False, ICE, spacing=1.1)
         text(slide, Inches(0.6), Inches(6.35), Inches(7), Inches(0.6), s.extra["footer"], 12, False, ICE)
 
     def divider(self, slide, s: Slide, index):
@@ -442,6 +446,36 @@ class Builder:
         self.column_cards(slide, s.extra["columns"], Inches(1.85), SLIDE_H - Inches(1.85) - Inches(0.75))
         self.source(slide, s, index)
 
+    def terms(self, slide, s: Slide, index):
+        """Карточки «термин — определение» в две колонки, до восьми штук."""
+        dark(slide)
+        accent = self.sec(s)[2]
+        self.title(slide, s)
+        terms = s.extra["terms"]
+        cols = 2 if len(terms) > 3 else 1
+        rows = math.ceil(len(terms) / cols)
+        gap = Inches(0.22)
+        top = Inches(1.75)
+        cw = (SLIDE_W - Inches(1.2) - gap * (cols - 1)) // cols
+        ch = (SLIDE_H - top - Inches(0.7) - gap * (rows - 1)) // rows
+        size = s.extra.get("size", 16 if rows >= 4 else 17)
+        for i, (term, meaning) in enumerate(terms):
+            c, r = divmod(i, rows)
+            x = Inches(0.6) + c * (cw + gap)
+            y = top + r * (ch + gap)
+            shape(slide, x, y, cw, ch, PANEL, MSO_SHAPE.ROUNDED_RECTANGLE, 0.08)
+            shape(slide, x, y, Inches(0.08), ch, accent)
+            box = text(slide, x + Inches(0.32), y, cw - Inches(0.55), ch, term, size + 3, True, accent,
+                       anchor=MSO_ANCHOR.MIDDLE, spacing=1.05)
+            p = box.text_frame.add_paragraph()
+            p.line_spacing = 1.05
+            r_ = p.add_run()
+            r_.text = meaning
+            r_.font.name = FONT
+            r_.font.size = Pt(size)
+            r_.font.color.rgb = WHITE
+        self.source(slide, s, index)
+
     def column_cards(self, slide, cols, y, h, size=17):
         n = len(cols)
         gap = Inches(0.35)
@@ -499,6 +533,8 @@ class Builder:
                 self.timeline(slide, s, index)
             elif s.kind == "columns":
                 self.columns(slide, s, index)
+            elif s.kind == "terms":
+                self.terms(slide, s, index)
             elif s.kind == "final":
                 self.final(slide, s, index)
             else:
