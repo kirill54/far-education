@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Проверяет тесты и сценарии симулятора модуля и собирает из них markdown.
 
-    python3 course/render_course.py            # все папки course/mNN
-    python3 course/render_course.py m01 m02    # только указанные
+    python3 course/render_course.py            # все папки course/mNN и глоссарий
+    python3 course/render_course.py m02 m03    # только указанные
 
-Источник правды — JSON: test.json и scenarios.json. Markdown рядом с ними
-пересобирается этим скриптом, руками его не правят.
+Источник правды — JSON: test.json, scenarios.json и terms.json. Markdown рядом с ними
+пересобирается этим скриптом, руками его не правят. Банк с "draft": true — черновик
+модуля, уроки которого ещё не собраны: для него не действует порог 30–45 вопросов.
 """
 
 from __future__ import annotations
@@ -25,9 +26,9 @@ SCALES = {"безопасность", "решения", "работа с гру�
 def check_test(data: dict) -> list[str]:
     errors = []
     questions = data["questions"]
-    if not 30 <= len(questions) <= 45:
+    if not data.get("draft") and not 30 <= len(questions) <= 45:
         errors.append(f"вопросов {len(questions)}, нужно 30–45")
-    if len(questions) < data["draw"] or data["pass"] > data["draw"]:
+    if data["pass"] > data["draw"] or (not data.get("draft") and len(questions) < data["draw"]):
         errors.append("выборка больше банка или порог больше выборки")
     ids = Counter(q["id"] for q in questions)
     errors += [f"повтор id {i}" for i, n in ids.items() if n > 1]
@@ -40,7 +41,7 @@ def check_test(data: dict) -> list[str]:
         if len({q[k] for k in LETTERS}) < 3:
             errors.append(f"{q['id']}: одинаковые варианты")
     for section, n in Counter(q["section"] for q in questions).items():
-        if n < 3:
+        if n < 3 and not data.get("draft"):
             errors.append(f"в разделе «{section}» меньше трёх вопросов")
     return errors
 
@@ -54,6 +55,8 @@ def render_test(data: dict) -> str:
         f"Банк — {len(questions)} вопросов. В попытке — {data['draw']} случайных, "
         f"зачёт — от {data['pass']} правильных. Один верный ответ из трёх.",
         "",
+        *([f"**Черновик.** Уроки модуля собраны не все, банк будет дополнен до 30–45 вопросов.", ""]
+          if data.get("draft") else []),
         "Правильные ответы по буквам: " + ", ".join(f"{RU[k]} — {share[k]}" for k in LETTERS) + ".",
         "Вопросы с номером из банка аттестации ФАР помечены «банк №».",
         "",
@@ -156,13 +159,36 @@ def render_scenarios(data: dict) -> str:
     return "\n".join(out)
 
 
+def render_glossary(data: dict) -> str:
+    total = sum(len(m["terms"]) for m in data["modules"].values())
+    out = [
+        "# Глоссарий курса",
+        "",
+        f"{total} терминов в порядке модулей курса. В скобках — урок, где термин объясняется. "
+        "Файл собирается из terms.json.",
+        "",
+    ]
+    for number, module in data["modules"].items():
+        out += [f"## Модуль {int(number)}. {module['title']}", ""]
+        for t in module["terms"]:
+            out.append(f"- **{t['t']}** ({t['l']}) — {t['d']}")
+        out.append("")
+    return "\n".join(out)
+
+
 def main(names: list[str]) -> int:
     dirs = [COURSE / n for n in names] if names else sorted(COURSE.glob("m[0-9][0-9]"))
     failed = False
+    if not names:
+        terms = json.loads((COURSE / "terms.json").read_text(encoding="utf-8"))
+        (COURSE / "glossary.md").write_text(render_glossary(terms) + "\n", encoding="utf-8")
+        print(f"glossary.md: {sum(len(m['terms']) for m in terms['modules'].values())} терминов")
     for d in dirs:
         test = json.loads((d / "test.json").read_text(encoding="utf-8"))
-        scen = json.loads((d / "scenarios.json").read_text(encoding="utf-8"))
-        errors = check_test(test) + [e for s in scen["scenarios"] for e in check_scenario(s)]
+        scen_path = d / "scenarios.json"
+        scen = json.loads(scen_path.read_text(encoding="utf-8")) if scen_path.exists() else None
+        scenarios = scen["scenarios"] if scen else []
+        errors = check_test(test) + [e for s in scenarios for e in check_scenario(s)]
         if errors:
             failed = True
             print(f"{d.name}: ошибки")
@@ -170,10 +196,12 @@ def main(names: list[str]) -> int:
                 print("  -", e)
             continue
         (d / "test.md").write_text(render_test(test) + "\n", encoding="utf-8")
-        (d / "scenarios.md").write_text(render_scenarios(scen) + "\n", encoding="utf-8")
+        if scen:
+            (d / "scenarios.md").write_text(render_scenarios(scen) + "\n", encoding="utf-8")
         letters = Counter(q["correct"] for q in test["questions"])
+        note = " — черновик" if test.get("draft") else ""
         print(f"{d.name}: {len(test['questions'])} вопросов {dict(letters)}, "
-              f"{len(scen['scenarios'])} сценария — ок")
+              f"сценариев {len(scenarios)} из 2{note}")
     return 1 if failed else 0
 
 
