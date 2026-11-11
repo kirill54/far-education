@@ -313,8 +313,14 @@ class Builder:
             text(slide, x, SLIDE_H - Inches(0.8), Inches(5.8), Inches(0.3), s.caption, 12, True, ICE)
         self.source(slide, s, index, light=True)
 
-    def cover(self, slide, s: Slide, im: Image.Image):
-        if s.extra.get("style") == "card":
+    def cover(self, slide, s: Slide, im: Image.Image | None):
+        if im is None:
+            dark(slide)
+            shape(slide, SLIDE_W - Inches(4.2), 0, Inches(4.2), SLIDE_H, NAVY)
+            shape(slide, SLIDE_W - Inches(4.2), 0, Inches(0.12), SLIDE_H, GOLD)
+            text(slide, SLIDE_W - Inches(3.8), Inches(2.2), Inches(3.4), Inches(3), self.m.number, 120, True, PANEL)
+            title_w = Inches(8)
+        elif s.extra.get("style") == "card":
             bg = cover_px(im, PX_W, PX_H).filter(ImageFilter.GaussianBlur(28))
             bg = shade(bg, "left", 0.95, 1.0)
             bright = sum(bg.convert("L").crop((PX_W // 2, 0, PX_W, PX_H)).resize((64, 36)).getdata()) / (64 * 36)

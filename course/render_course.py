@@ -4,7 +4,7 @@
     python3 course/render_course.py            # все папки course/mNN и глоссарий
     python3 course/render_course.py m02 m03    # только указанные
 
-Источник правды — JSON: test.json, scenarios.json и terms.json. Markdown рядом с ними
+Источник правды — JSON в папках модулей: test.json, scenarios.json, terms.json. Markdown рядом с ними
 пересобирается этим скриптом, руками его не правят. Банк с "draft": true — черновик
 модуля, уроки которого ещё не собраны: для него не действует порог 30–45 вопросов.
 """
@@ -159,17 +159,17 @@ def render_scenarios(data: dict) -> str:
     return "\n".join(out)
 
 
-def render_glossary(data: dict) -> str:
-    total = sum(len(m["terms"]) for m in data["modules"].values())
+def render_glossary(modules: list[dict]) -> str:
+    total = sum(len(m["terms"]) for m in modules)
     out = [
         "# Глоссарий курса",
         "",
         f"{total} терминов в порядке модулей курса. В скобках — урок, где термин объясняется. "
-        "Файл собирается из terms.json.",
+        "Файл собирается из course/mNN/terms.json.",
         "",
     ]
-    for number, module in data["modules"].items():
-        out += [f"## Модуль {int(number)}. {module['title']}", ""]
+    for module in modules:
+        out += [f"## Модуль {int(module['module'])}. {module['title']}", ""]
         for t in module["terms"]:
             out.append(f"- **{t['t']}** ({t['l']}) — {t['d']}")
         out.append("")
@@ -180,10 +180,12 @@ def main(names: list[str]) -> int:
     dirs = [COURSE / n for n in names] if names else sorted(COURSE.glob("m[0-9][0-9]"))
     failed = False
     if not names:
-        terms = json.loads((COURSE / "terms.json").read_text(encoding="utf-8"))
-        (COURSE / "glossary.md").write_text(render_glossary(terms) + "\n", encoding="utf-8")
-        print(f"glossary.md: {sum(len(m['terms']) for m in terms['modules'].values())} терминов")
+        modules = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(COURSE.glob("m[0-9][0-9]/terms.json"))]
+        (COURSE / "glossary.md").write_text(render_glossary(modules) + "\n", encoding="utf-8")
+        print(f"glossary.md: {sum(len(m['terms']) for m in modules)} терминов")
     for d in dirs:
+        if not (d / "test.json").exists():
+            continue
         test = json.loads((d / "test.json").read_text(encoding="utf-8"))
         scen_path = d / "scenarios.json"
         scen = json.loads(scen_path.read_text(encoding="utf-8")) if scen_path.exists() else None
