@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, terms, timeline
 
 LESSONS: list[Lesson] = []
@@ -140,7 +142,8 @@ LESSONS.append(Lesson("15.1", "neschastny-sluchay", {
           "постоянно с пострадавшим, всё записывается со временем. Группу регистрируют в территориальном "
           "подразделении МЧС, а после маршрута первым делом сообщают о завершении. Пока ждём спасателей — "
           "первая помощь, безопасность и связь. Без связи за помощью идут минимум двое с запиской. Дальше — "
-          "связь."),
+          "связь. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m15/malaya-gruppa.md").read_text(encoding="utf-8")),
 ]))
 
 LESSONS.append(Lesson("15.2", "svyaz", {
