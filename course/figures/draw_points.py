@@ -317,4 +317,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit("Готовые схемы лежат в course/m08/figures и course/m09/figures. Этот черновик их не перезаписывает.")
