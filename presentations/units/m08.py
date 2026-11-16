@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, terms, timeline
 
 LESSONS: list[Lesson] = []
@@ -278,7 +280,8 @@ LESSONS.append(Lesson("8.2", "tochki-strahovki-na-skalah", {
           "скала и установка. Закладку ставят в сужение по направлению рывка, френд — в середине рабочего хода, крюк "
           "должен звенеть. Стационарные точки осматривают: люфт, коррозия, трещины. Станция — минимум две независимые "
           "точки с углом между ветвями не больше шестидесяти градусов. Дальше — как связка работает на многоверёвочном "
-          "маршруте и как спускаться."),
+          "маршруте и как спускаться. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m08/hattingh-tochki.md").read_text(encoding="utf-8")),
 ]))
 
 LESSONS.append(Lesson("8.3", "svyazka-na-skalah-i-spusk", {
