@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import (A1, A2, A3, GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, take,
                         terms, timeline)
+
+# Подробный текст урока 1.1: учебные группы и разряды. Он же лежит в Skillspace.
+_GROUP_RANKS = (
+    Path(__file__).resolve().parents[2] / "course" / "m01" / "gruppy-i-razryady.md"
+).read_text(encoding="utf-8")
 
 LESSONS: list[Lesson] = []
 
@@ -62,7 +69,7 @@ LESSONS.append(Lesson("1.1", "istoriya-i-sistema", {
        "2.3, о выборе места бивака — урок 6.2, о решениях на маршруте — модули 12 и 13."),
     divider(2, ["Ступени и школа", "Категории трудности", "Шкалы мира"],
             "Теперь соберём то, что выросло из этой истории, в систему: как растёт альпинист, кто его учит "
-            "и как оценивают сложность маршрута."),
+            "и как оценивают сложность маршрута. " + _GROUP_RANKS),
     take(A1, 6, 2), take(A1, 7, 2, extra={"columns": [
         ("Наша шкала", GOLD, ["1Б, затем 2А … 6Б", "Оценивают только путь подъёма",
                               "Подход и спуск — в описании отдельно"]),
