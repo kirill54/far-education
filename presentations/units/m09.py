@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import (A1, GOLD, GREEN, RED, Lesson, Slide, columns, cover, divider, final, flags, numbers, terms,
                         timeline)
 
@@ -166,7 +168,8 @@ LESSONS.append(Lesson("9.1", "ledorub-i-koshki", {
           "ботинки и подгоняют дома. На снегу до двадцати градусов идут ёлочкой с ледорубом-тростью, на пологом "
           "спуске — спиной к склону с упором на пятку. Самозадержание начинают мгновенно: на живот ногами вниз, клюв в "
           "снег, вес на ледоруб, в кошках ноги согнуты. На льду главное — не сорваться. Дальше — страховка на снегу "
-          "и льду."),
+          "и льду. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m09/glubokiy-sneg.md").read_text(encoding="utf-8")),
 ]))
 
 LESSONS.append(Lesson("9.2", "strahovka-na-snegu-i-ldu", {
