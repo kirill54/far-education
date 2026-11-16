@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, terms, timeline
 
 LESSONS: list[Lesson] = []
@@ -788,7 +790,8 @@ LESSONS.append(Lesson("7.4", "perila-spusk-podyom", {
           "усах. На спуске главная угроза — концы верёвки: узлы на концах, обе жилы в устройстве, середина у кольца. "
           "Клиент спускается только со схватывающим узлом и под страховкой инструктора: по верёвке первым идёт "
           "инструктор, заранее зарядив и проверив клиента, а при сомнении клиента опускают. Поднимаются на зажимах "
-          "или прусиках. Дальше — как страховать и опускать клиента сверху."),
+          "или прусиках. Дальше — как страховать и опускать клиента сверху. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m07/spusk-melochi.md").read_text(encoding="utf-8")),
 ]))
 
 LESSONS.append(Lesson("7.5", "strahovka-i-opuskanie-klienta", {

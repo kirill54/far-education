@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import GOLD, GREEN, RED, Lesson, Slide, columns, cover, divider, final, flags, numbers, terms, timeline
 
 LESSONS: list[Lesson] = []
@@ -291,7 +293,8 @@ LESSONS.append(Lesson("11.1", "prostoy-relyef", {
           "осыпи вверх — короткими шагами по крупным камням и зигзагом, вниз — прямо, переступая ногами. На "
           "травяном склоне ногу ставят на всю стопу. Крутой бок морены проходят плотной группой зигзагами, а "
           "главный источник камней на тропе — сама группа. Перевалы до один Б — это осыпи, травы, снег и простые "
-          "скалы, и самый травмоопасный отрезок дня — спуск. Дальше — комбинированный рельеф."),
+          "скалы, и самый травмоопасный отрезок дня — спуск. Дальше — комбинированный рельеф. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m11/prostoj-relyef.md").read_text(encoding="utf-8")),
 ]))
 
 LESSONS.append(Lesson("11.2", "kombinirovanny-relyef", {
@@ -1201,5 +1204,6 @@ LESSONS.append(Lesson("11.4", "perepravy", {
           "по диагонали, по ним идут ниже перил, лицом к течению, с короткой самостраховкой не длиннее локтя, "
           "но в потоке человек должен иметь возможность освободиться, а у страхующих нож. Последний переходит "
           "со страховкой с дальнего берега. Упал — сбросить рюкзак, на спину ногами вперёд. Теперь — тест "
-          "модуля и симуляторы."),
+          "модуля и симуляторы. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m11/brod.md").read_text(encoding="utf-8")),
 ]))

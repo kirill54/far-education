@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import (A1, A2, A3, GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, take,
                         terms, timeline)
 
@@ -436,7 +438,8 @@ LESSONS.append(Lesson("6.2", "gruppovoe-snaryazhenie-i-bivak", {
           "оказалось у одного человека. Место лагеря выбирают прежде всего по безопасности: вдали от склонов, "
           "лавин и камнепадов, выше уровня реки, лучше в кармане морены. Палатку ставят торцом к ветру. Горелку — "
           "на открытом воздухе, угарный газ не прощает ошибок. Снежная пещера спасёт ночь, но только с "
-          "вентиляцией. А холодная ночёвка — чаще всего результат нарушенного плана. Дальше — экология."),
+          "вентиляцией. А холодная ночёвка — чаще всего результат нарушенного плана. Дальше — экология. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m06/peshera.md").read_text(encoding="utf-8")),
 ]))
 
 LESSONS.append(Lesson("6.3", "ekologiya", {

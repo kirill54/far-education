@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import (A1, A2, A3, GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, take,
                         terms, timeline)
 
@@ -306,5 +308,6 @@ LESSONS.append(Lesson("10.3", "na-lavinoopasnom-marshrute", {
           "нестабильный склон; опасные места проходим по одному, от укрытия к укрытию, по гребням, а вниз — прямо по "
           "линии стока. Красные флаги, «вумпф» и трещины — повод пересмотреть план. Под снегом счёт идёт на минуты, "
           "поэтому датчик, щуп и лопата — у каждого, и пользоваться ими учатся очно. Теперь — тест модуля и "
-          "симулятор."),
+          "симулятор. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m10/kuluar.md").read_text(encoding="utf-8")),
 ]))

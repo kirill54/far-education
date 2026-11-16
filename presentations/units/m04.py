@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from lesson_kit import (A1, A2, A3, GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, take,
                         terms, timeline)
 
@@ -185,5 +187,6 @@ LESSONS.append(Lesson("4.2", "navigaciya-na-marshrute", {
           "План маршрута готовим в лагере: азимуты, обратные азимуты, расстояния, время и резерв. Навигатор и "
           "смартфон с офлайн-картами — помощники, но не замена карте: держите их в тепле и берите запасное питание. "
           "А если потерялись — остановитесь, подумайте, осмотритесь и составьте план. Теперь — тест модуля и "
-          "симулятор."),
+          "симулятор. "
+          + Path(__file__).resolve().parents[2].joinpath("course/m04/belaya-mgla.md").read_text(encoding="utf-8")),
 ]))
