@@ -176,6 +176,89 @@ def render_glossary(modules: list[dict]) -> str:
     return "\n".join(out)
 
 
+def render_notes() -> str:
+    rows = []
+    for path in sorted(COURSE.glob("m[0-9][0-9]/bank.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for num, question in data["questions"].items():
+            if question.get("note"):
+                rows.append((int(num), question))
+    rows.sort()
+    out = [
+        "# Замечания к банку аттестации",
+        "",
+        f"{len(rows)} вопросов, где ответ банка неточен или неполон. "
+        "В уроке сказано, как правильно и какой вариант засчитывают на аттестации. "
+        "Список собирается из поля note в course/mNN/bank.json.",
+        "",
+    ]
+    for num, question in rows:
+        out += [
+            f"## № {num}. Урок {question['l']}",
+            "",
+            f"**Вопрос.** {question['q']}",
+            "",
+            f"**Засчитывают.** {question['a']}",
+            "",
+            question["note"],
+            "",
+        ]
+    return "\n".join(out)
+
+
+def official_alpine() -> dict[int, dict]:
+    raw = (COURSE.parent / "trenazher" / "questions.js").read_text(encoding="utf-8")
+    payload = raw.split("=", 1)[1].strip()
+    if payload.endswith(";"):
+        payload = payload[:-1]
+    questions = json.loads(payload)
+    return {q["id"]: q for q in questions if q.get("track") == "alpine"}
+
+
+def write_exam() -> None:
+    """25 вопросов из 255: варианты берутся из тестов курса, пропуски — из тренажёра."""
+    by_bank: dict[int, dict] = {}
+    for path in sorted(COURSE.glob("m[0-9][0-9]/test.json")):
+        for question in json.loads(path.read_text(encoding="utf-8"))["questions"]:
+            if question.get("bank") is None:
+                continue
+            by_bank.setdefault(int(question["bank"]), question)
+    official = official_alpine()
+    bank_ids = []
+    for path in sorted(COURSE.glob("m[0-9][0-9]/bank.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        bank_ids += [int(num) for num in data["questions"]]
+    exam = []
+    for num in bank_ids:
+        src = by_bank.get(num) or official[num]
+        exam.append({
+            "bank": num,
+            "lesson": src.get("l") or src.get("section"),
+            "q": src["q"],
+            "a": src["a"],
+            "b": src["b"],
+            "c": src["c"],
+            "correct": src["correct"],
+            "ref": src.get("ref") or src.get("section"),
+        })
+    out = COURSE.parent / "ekzamen" / "questions.js"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text("window.FAR_COURSE_EXAM = " + json.dumps(exam, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    print(f"ekzamen/questions.js: {len(exam)} вопросов")
+
+
+def write_simulator() -> None:
+    packed = []
+    for path in sorted(COURSE.glob("m[0-9][0-9]/scenarios.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for scenario in data["scenarios"]:
+            packed.append({"module": data["module"], "points": data["points"], **scenario})
+    out = COURSE.parent / "simulator" / "data.js"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text("window.FAR_SIM = " + json.dumps(packed, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    print(f"simulator/data.js: {len(packed)} сценариев")
+
+
 def main(names: list[str]) -> int:
     dirs = [COURSE / n for n in names] if names else sorted(COURSE.glob("m[0-9][0-9]"))
     failed = False
@@ -183,8 +266,24 @@ def main(names: list[str]) -> int:
         modules = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(COURSE.glob("m[0-9][0-9]/terms.json"))]
         (COURSE / "glossary.md").write_text(render_glossary(modules) + "\n", encoding="utf-8")
         print(f"glossary.md: {sum(len(m['terms']) for m in modules)} терминов")
+        (COURSE / "bank-notes.md").write_text(render_notes() + "\n", encoding="utf-8")
+        print("bank-notes.md")
+        write_exam()
+        write_simulator()
     for d in dirs:
         if not (d / "test.json").exists():
+            scen_only = d / "scenarios.json"
+            if scen_only.exists():
+                scen = json.loads(scen_only.read_text(encoding="utf-8"))
+                errors = [e for s in scen["scenarios"] for e in check_scenario(s)]
+                if errors:
+                    failed = True
+                    print(f"{d.name}: ошибки")
+                    for e in errors:
+                        print("  -", e)
+                else:
+                    (d / "scenarios.md").write_text(render_scenarios(scen) + "\n", encoding="utf-8")
+                    print(f"{d.name}: сценариев {len(scen['scenarios'])}")
             continue
         test = json.loads((d / "test.json").read_text(encoding="utf-8"))
         scen_path = d / "scenarios.json"
