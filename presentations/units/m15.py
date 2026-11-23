@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lesson_kit import GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, terms, timeline
+from lesson_kit import GOLD, GREEN, RED, Lesson, Slide, columns, cover, divider, final, flags, numbers, terms, timeline
 
 LESSONS: list[Lesson] = []
 
@@ -142,8 +142,16 @@ LESSONS.append(Lesson("15.1", "neschastny-sluchay", {
           "постоянно с пострадавшим, всё записывается со временем. Группу регистрируют в территориальном "
           "подразделении МЧС, а после маршрута первым делом сообщают о завершении. Пока ждём спасателей — "
           "первая помощь, безопасность и связь. Без связи за помощью идут минимум двое с запиской. Дальше — "
-          "связь. "
-          + Path(__file__).resolve().parents[2].joinpath("course/m15/malaya-gruppa.md").read_text(encoding="utf-8")),
+          "связь."),
+    Slide("figure", section=2, title="Малая группа и профессиональная команда", image="malaya-stanciya", items=[
+        "У двойки часто одна станция и одна верёвка",
+        "Верёвка должна фиксироваться сама, если рука отказала",
+        "У команды две станции и две верёвки",
+    ], narration=
+       "На схеме два разных набора снаряжения, и приём одного нельзя молча перенести на другой. У двойки часто одна "
+       "станция и одна верёвка: станция должна быть безусловной, а верёвка — фиксироваться сама, если рука на тормозе "
+       "отказала. У профессиональной команды две независимые станции и две разнесённые верёвки, грузовая и страховочная. "
+       + Path(__file__).resolve().parents[2].joinpath("course/m15/malaya-gruppa.md").read_text(encoding="utf-8")),
 ]))
 
 LESSONS.append(Lesson("15.2", "svyaz", {

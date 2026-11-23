@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Симулятор ситуаций · школа альпинизма · ФАР</title>
+<link rel="icon" type="image/x-icon" href="../favicon.ico">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:#12161b;font-family:'Helvetica Neue',Arial,'Segoe UI',sans-serif;background:#f5f7f9}
+  a{color:#1466a8;text-decoration:none}
+  header{background:#0b2f4a;color:#fff}
+  .bar{max-width:860px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .bar nav{display:flex;gap:8px;flex-wrap:wrap}
+  .bar a{color:rgba(255,255,255,.82);font-size:13px;padding:6px 10px;border-radius:7px}
+  .bar a:hover{background:rgba(255,255,255,.12);color:#fff}
+  .wrap{max-width:860px;margin:0 auto;padding:28px 20px 64px}
+  h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.03em;margin:0 0 10px;color:#0b2f4a}
+  .lead{color:#4a5560;font-size:16.5px;line-height:1.55;margin:0 0 18px}
+  .note{font-size:13.5px;color:#626c78;background:#eef3f7;border-radius:12px;padding:12px 14px;margin:0 0 22px;line-height:1.45}
+  .list{display:grid;gap:10px}
+  button.row, button.opt, button.btn{font:inherit;cursor:pointer}
+  button.row{display:block;width:100%;text-align:left;background:#fff;border:1px solid #e9edf1;border-radius:14px;padding:14px 16px}
+  button.row b{display:block;color:#0b2f4a;margin-bottom:4px}
+  button.row span{color:#626c78;font-size:14px}
+  .q{font-size:19px;line-height:1.45;margin:0 0 16px}
+  .opt{display:block;width:100%;text-align:left;margin:0 0 10px;padding:12px 14px;border-radius:12px;border:1px solid #d5dbe1;background:#fff}
+  .opt:hover{border-color:#0e5c8a}
+  .fb{border-radius:12px;padding:12px 14px;line-height:1.45;margin:8px 0 0}
+  .best{background:#e7f6ee;color:#0f7a4a}
+  .ok{background:#e9f1f8;color:#0b2f4a}
+  .error{background:#fff4e8;color:#8a4b12}
+  .critical{background:#fdecea;color:#a32018}
+  .btn{border:0;border-radius:11px;padding:12px 18px;font-weight:700;font-size:15px;background:#1466a8;color:#fff}
+  .ghost{background:#eef3f7;color:#0b2f4a}
+  .hidden{display:none}
+  .code{font-family:ui-monospace,monospace;font-size:18px;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <strong>ФАР · симулятор</strong>
+    <nav>
+      <a href="../ekzamen/">Экзамен курса</a>
+      <a href="../trenazher/">Тренажёр аттестации</a>
+      <a href="../obuchenie/">Обучение</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <div id="home">
+    <h1>Симулятор ситуаций</h1>
+    <p class="lead">Сценарии всех модулей и сквозная неделя. После выбора видно, чем он хорош или чем опасен. В конце — код прохождения для задания в Skillspace.</p>
+    <p class="note">Учебный разбор, не допуск и не аттестация. Критическая ошибка заканчивает сценарий. Буквы кода: Л — лучшее, Д — допустимое, О — ошибка, К — критическая.</p>
+    <div id="list" class="list"></div>
+  </div>
+  <div id="play" class="hidden">
+    <p id="kicker" class="note"></p>
+    <h1 id="title"></h1>
+    <p id="intro" class="lead"></p>
+    <p id="ask" class="q"></p>
+    <div id="options"></div>
+    <div id="feedback"></div>
+    <div class="actions" style="margin-top:16px">
+      <button class="btn hidden" id="next" type="button">Дальше</button>
+    </div>
+  </div>
+  <div id="done" class="hidden">
+    <h1>Разбор</h1>
+    <p id="score" class="lead"></p>
+    <p>Код прохождения: <strong class="code" id="code"></strong></p>
+    <p id="scales" class="note"></p>
+    <p id="review"></p>
+    <button class="btn ghost" id="again" type="button">К списку</button>
+  </div>
+</div>
+<script src="data.js"></script>
+<script>
+const MARK = {best: "Л", ok: "Д", error: "О", critical: "К"};
+const NAME = {best: "Лучшее", ok: "Допустимое", error: "Ошибка", critical: "Критическая ошибка"};
+let scenario, stepId, grades, pending, scales;
+
+function codeOf(id, marks) {
+  const body = id + "-" + marks.map((g) => MARK[g]).join("");
+  let n = 0;
+  for (const ch of body) n = (n * 33 + ch.charCodeAt(0)) % 1000;
+  return body + "-" + String(n).padStart(3, "0");
+}
+
+function show(id) {
+  for (const node of ["home", "play", "done"]) document.getElementById(node).classList.toggle("hidden", node !== id);
+}
+
+function start(item) {
+  scenario = item;
+  stepId = item.start;
+  grades = [];
+  scales = {"безопасность": 0, "решения": 0, "работа с группой": 0};
+  document.getElementById("title").textContent = item.title;
+  document.getElementById("kicker").textContent = "Модуль " + Number(item.module);
+  document.getElementById("intro").textContent = item.intro;
+  show("play");
+  ask();
+}
+
+function ask() {
+  const step = scenario.steps[stepId];
+  document.getElementById("ask").textContent = step.text;
+  document.getElementById("feedback").innerHTML = "";
+  document.getElementById("next").classList.add("hidden");
+  const box = document.getElementById("options");
+  box.innerHTML = "";
+  step.options.forEach((option, index) => {
+    const button = document.createElement("button");
+    button.className = "opt";
+    button.type = "button";
+    button.textContent = option.text;
+    button.addEventListener("click", () => choose(option, button));
+    box.appendChild(button);
+  });
+}
+
+function choose(option, button) {
+  for (const node of document.querySelectorAll("#options .opt")) node.disabled = true;
+  button.classList.add(option.grade);
+  grades.push(option.grade);
+  scales[scenario.steps[stepId].scale] += scenario.points[option.grade];
+  const fb = document.createElement("div");
+  fb.className = "fb " + option.grade;
+  fb.textContent = NAME[option.grade] + ". " + option.feedback;
+  document.getElementById("feedback").appendChild(fb);
+  pending = option;
+  const next = document.getElementById("next");
+  next.classList.remove("hidden");
+  next.textContent = option.grade === "critical" || !option.next ? "К разбору" : "Дальше";
+}
+
+document.getElementById("next").addEventListener("click", () => {
+  if (pending.grade === "critical" || !pending.next) return finish();
+  stepId = pending.next;
+  ask();
+});
+
+function finish() {
+  const total = grades.reduce((sum, grade) => sum + scenario.points[grade], 0);
+  document.getElementById("score").textContent = "Баллы: " + total + ". Критическая ошибка заканчивает сценарий.";
+  document.getElementById("code").textContent = codeOf(scenario.id, grades);
+  document.getElementById("scales").textContent = Object.entries(scales).map(([name, value]) => name + " " + value).join(" · ");
+  document.getElementById("review").textContent = "Повторить: " + scenario.lessons.join("; ") + ".";
+  show("done");
+}
+
+document.getElementById("again").addEventListener("click", () => show("home"));
+
+const list = document.getElementById("list");
+const week = window.FAR_SIM.find((item) => item.id === "m16-week");
+const ordered = [week, ...window.FAR_SIM.filter((item) => item !== week)];
+for (const item of ordered) {
+  const button = document.createElement("button");
+  button.className = "row";
+  button.type = "button";
+  button.innerHTML = "<b>" + item.title + "</b><span>Модуль " + Number(item.module) + "</span>";
+  button.addEventListener("click", () => start(item));
+  list.appendChild(button);
+}
+</script>
+</body>
+</html>

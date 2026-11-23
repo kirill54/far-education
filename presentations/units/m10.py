@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lesson_kit import (A1, A2, A3, GOLD, GREEN, RED, Lesson, columns, cover, divider, final, flags, numbers, take,
-                        terms, timeline)
+from lesson_kit import (A1, A2, A3, GOLD, GREEN, RED, Lesson, Slide, columns, cover, divider, final, flags, numbers,
+                        take, terms, timeline)
 
 LESSONS: list[Lesson] = []
 
@@ -308,6 +308,14 @@ LESSONS.append(Lesson("10.3", "na-lavinoopasnom-marshrute", {
           "нестабильный склон; опасные места проходим по одному, от укрытия к укрытию, по гребням, а вниз — прямо по "
           "линии стока. Красные флаги, «вумпф» и трещины — повод пересмотреть план. Под снегом счёт идёт на минуты, "
           "поэтому датчик, щуп и лопата — у каждого, и пользоваться ими учатся очно. Теперь — тест модуля и "
-          "симулятор. "
-          + Path(__file__).resolve().parents[2].joinpath("course/m10/kuluar.md").read_text(encoding="utf-8")),
+          "симулятор."),
+    Slide("figure", section=3, title="Кулуар проходят по борту", image="kuluar-bort", items=[
+        "Дно — ловушка, куда соберётся лавина",
+        "Идут и пересекают по бортам",
+        "Утренний тест снега не разрешает весь день",
+    ], narration=
+       "Кулуар проходят и пересекают по бортам, а не по дну. Дно — ловушка, куда соберётся лавина. Летняя тропа "
+       "зимой — другой маршрут: под снегом у неё другая крутизна и другие ловушки. Один тест снега описывает одну "
+       "точку и один момент. Пока группа идёт, склон меняется, поэтому утренний тест не есть разрешение на весь день. "
+       + Path(__file__).resolve().parents[2].joinpath("course/m10/kuluar.md").read_text(encoding="utf-8")),
 ]))

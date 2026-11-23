@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Итоговый экзамен курса · школа альпинизма · ФАР</title>
+<link rel="icon" type="image/x-icon" href="../favicon.ico">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:#12161b;font-family:'Helvetica Neue',Arial,'Segoe UI',sans-serif;background:#f5f7f9}
+  a{color:#1466a8;text-decoration:none}
+  header{background:#0b2f4a;color:#fff}
+  .bar{max-width:820px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .bar nav{display:flex;gap:8px;flex-wrap:wrap}
+  .bar a{color:rgba(255,255,255,.82);font-size:13px;padding:6px 10px;border-radius:7px}
+  .bar a:hover{background:rgba(255,255,255,.12);color:#fff}
+  .wrap{max-width:820px;margin:0 auto;padding:28px 20px 64px}
+  h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.03em;margin:0 0 10px;color:#0b2f4a}
+  .lead{color:#4a5560;font-size:16.5px;line-height:1.55;margin:0 0 18px}
+  .note{font-size:13.5px;color:#626c78;background:#eef3f7;border-radius:12px;padding:12px 14px;margin:0 0 22px;line-height:1.45}
+  button.mode, button.opt, button.btn{font:inherit;cursor:pointer}
+  .mode{display:block;width:100%;text-align:left;background:#fff;border:1px solid #e9edf1;border-radius:14px;padding:18px 16px}
+  .mode b{display:block;color:#0b2f4a;font-size:17px;margin-bottom:6px}
+  .mode span{color:#626c78;font-size:14px;line-height:1.4}
+  .hud{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 0 16px}
+  .prog{flex:1;height:8px;background:#e4e9ee;border-radius:99px;overflow:hidden}
+  .prog i{display:block;height:100%;background:#0e5c8a;width:0}
+  .q{font-size:19px;line-height:1.4;margin:0 0 18px}
+  .opt{display:block;width:100%;text-align:left;margin:0 0 10px;padding:12px 14px;border-radius:12px;border:1px solid #d5dbe1;background:#fff}
+  .opt.on{border-color:#0e5c8a;background:#e9f1f8}
+  .btn{border:0;border-radius:11px;padding:12px 18px;font-weight:700;font-size:15px;background:#1466a8;color:#fff}
+  .ghost{background:#eef3f7;color:#0b2f4a;margin-left:8px}
+  .pass{color:#0f7a4a;font-weight:700}
+  .fail{color:#d6392c;font-weight:700}
+  .hidden{display:none}
+  .code{font-family:ui-monospace,monospace;font-size:18px}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <strong>ФАР · экзамен курса</strong>
+    <nav>
+      <a href="../simulator/">Симулятор</a>
+      <a href="../trenazher/">Тренажёр аттестации</a>
+      <a href="../obuchenie/">Обучение</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <div id="home">
+    <h1>Итоговый экзамен</h1>
+    <p class="lead">Как на аттестации: 25 вопросов из 255, 60 минут, зачёт от 20. В ходе попытки верные ответы не показываются.</p>
+    <p class="note">Это экзамен теории курса, не квалификационный экзамен ФАР. Сертификат курса квалификацию не даёт. Замечания к отдельным формулировкам банка собраны в course/bank-notes.md: на аттестации засчитывают ответ банка, в уроке сказано, где он неполон.</p>
+    <button class="mode" id="start" type="button"><b>Начать попытку</b><span>Случайные 25 вопросов. Таймер 60 минут. Порог 20.</span></button>
+  </div>
+  <div id="quiz" class="hidden">
+    <div class="hud">
+      <div class="prog"><i id="bar"></i></div>
+      <div id="count"></div>
+      <div id="timer"></div>
+    </div>
+    <p id="q" class="q"></p>
+    <div id="options"></div>
+    <button class="btn" id="go" type="button">Дальше</button>
+  </div>
+  <div id="result" class="hidden">
+    <h1 id="headline"></h1>
+    <p id="summary" class="lead"></p>
+    <p>Код попытки: <strong class="code" id="code"></strong></p>
+    <div id="misses" class="note"></div>
+    <button class="btn" id="retry" type="button">Ещё попытка</button>
+  </div>
+</div>
+<script src="questions.js"></script>
+<script>
+const DRAW = 25, PASS = 20, LIMIT = 60 * 60;
+let paper, index, picked, left, timer;
+
+function shuffle(list) {
+  const copy = list.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function show(id) {
+  for (const node of ["home", "quiz", "result"]) document.getElementById(node).classList.toggle("hidden", node !== id);
+}
+
+function start() {
+  paper = shuffle(window.FAR_COURSE_EXAM).slice(0, DRAW).map((q) => ({...q, answer: null}));
+  index = 0;
+  left = LIMIT;
+  show("quiz");
+  clearInterval(timer);
+  timer = setInterval(tick, 1000);
+  render();
+}
+
+function tick() {
+  left -= 1;
+  const m = Math.floor(left / 60), s = left % 60;
+  document.getElementById("timer").textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  if (left <= 0) finish();
+}
+
+function render() {
+  const q = paper[index];
+  picked = q.answer;
+  document.getElementById("count").textContent = (index + 1) + " / " + paper.length;
+  document.getElementById("bar").style.width = ((index) / paper.length * 100) + "%";
+  document.getElementById("q").textContent = q.q;
+  const box = document.getElementById("options");
+  box.innerHTML = "";
+  for (const key of ["a", "b", "c"]) {
+    const button = document.createElement("button");
+    button.className = "opt" + (q.answer === key ? " on" : "");
+    button.type = "button";
+    button.textContent = q[key];
+    button.addEventListener("click", () => {
+      q.answer = key;
+      picked = key;
+      render();
+    });
+    box.appendChild(button);
+  }
+  document.getElementById("go").textContent = index === paper.length - 1 ? "Завершить" : "Дальше";
+}
+
+document.getElementById("go").addEventListener("click", () => {
+  if (index < paper.length - 1) {
+    index += 1;
+    render();
+  } else finish();
+});
+
+function finish() {
+  clearInterval(timer);
+  const right = paper.filter((q) => q.answer === q.correct);
+  const wrong = paper.filter((q) => q.answer !== q.correct);
+  const ok = right.length >= PASS;
+  document.getElementById("headline").innerHTML = ok ? "<span class='pass'>Зачёт</span>" : "<span class='fail'>Пока не зачёт</span>";
+  document.getElementById("summary").textContent = right.length + " из " + paper.length + ". Порог — " + PASS + ".";
+  const body = paper.map((q) => (q.answer || "-") + q.bank).join(".");
+  let n = 0;
+  for (const ch of body) n = (n * 33 + ch.charCodeAt(0)) % 10000;
+  document.getElementById("code").textContent = "Э-" + right.length + "-" + String(n).padStart(4, "0");
+  const misses = document.getElementById("misses");
+  misses.innerHTML = wrong.length
+    ? "<b>Повторить, не подглядывая в ключ.</b><br>" + wrong.map((q) => "Банк № " + q.bank + " — " + q.ref).join("<br>")
+    : "Все 25 ответов совпали с ключом банка.";
+  show("result");
+}
+
+document.getElementById("start").addEventListener("click", start);
+document.getElementById("retry").addEventListener("click", start);
+</script>
+</body>
+</html>
