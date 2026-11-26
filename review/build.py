@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import re
 import shutil
@@ -147,13 +148,20 @@ def figures_for(lesson) -> list[tuple[str, str, Path]]:
     return found
 
 
-def copy_figure(code: str, key: str, path: Path) -> str:
-    folder = OUT / "img"
-    folder.mkdir(exist_ok=True)
-    name = f"{code}-{key}{path.suffix.lower()}"
-    dest = folder / name
-    shutil.copy2(path, dest)
-    return f"img/{name}"
+_IMAGE_SRC: dict[Path, str] = {}
+
+
+def image_src(path: Path) -> str:
+    """Картинка внутри страницы: отдельный файл img/ в просмотре не подгружается."""
+    path = path.resolve()
+    cached = _IMAGE_SRC.get(path)
+    if cached is not None:
+        return cached
+    mime = "image/jpeg" if path.suffix.lower() in {".jpg", ".jpeg"} else "image/png"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    cached = f"data:{mime};base64,{encoded}"
+    _IMAGE_SRC[path] = cached
+    return cached
 
 
 def css() -> str:
@@ -357,7 +365,7 @@ def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None) ->
         )
     figs = []
     for key, caption, path in item["figures"]:
-        src = copy_figure(item["code"], key, path)
+        src = image_src(path)
         fig_id = f"fig-{anchor}-{esc(key)}"
         figs.append(
             f'<figure id="{fig_id}" data-review="figure" data-lesson="{esc(item["code"])}">'
@@ -436,7 +444,7 @@ def render_index(lessons_meta: list[dict]) -> str:
         anchor = lesson_anchor(item["code"])
         chunks.append(f'<h2>{esc(item["code"])}. {esc(item["title"])}</h2>')
         for key, caption, path in item["figures"]:
-            src = f"img/{item['code']}-{key}{path.suffix.lower()}"
+            src = image_src(path)
             fig_id = f"list-{anchor}-{key}"
             chunks.append(
                 f'<figure id="{esc(fig_id)}" data-review="figure" data-lesson="{esc(item["code"])}">'
@@ -480,7 +488,6 @@ def main() -> None:
     img_dir = OUT / "img"
     if img_dir.exists():
         shutil.rmtree(img_dir)
-    img_dir.mkdir()
     for old in OUT.glob("*.html"):
         old.unlink()
     (OUT / "index.html").write_text(render_index(lessons_meta), encoding="utf-8")
