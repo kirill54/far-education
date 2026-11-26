@@ -262,6 +262,24 @@ figure {
   border-radius: 12px;
 }
 figure img { display: block; width: 100%; height: auto; border-radius: 6px; }
+.portraits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: stretch;
+  margin: 8px 0 24px;
+}
+.portraits figure {
+  flex: 1 1 220px;
+  max-width: 280px;
+  margin: 0;
+}
+.portraits figure img {
+  width: 100%;
+  height: 320px;
+  object-fit: contain;
+  background: #fff;
+}
 figcaption {
   font-family: "Helvetica Neue", Arial, sans-serif;
   font-size: 15px;
@@ -361,6 +379,14 @@ def page(title: str, body: str, current: str | None, lessons_meta: list[dict]) -
 """
 
 
+def is_portrait(path: Path) -> bool:
+    from PIL import Image
+
+    with Image.open(path) as im:
+        width, height = im.size
+    return height >= width
+
+
 def figure_html(item: dict, anchor: str, heading: str, caption: str, path: Path) -> str:
     src = image_src(path)
     fig_id = f"fig-{anchor}-{slug(path.stem)}"
@@ -391,11 +417,24 @@ def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None) ->
         parts = []
         if heading:
             parts.append(f'<h2>{inline(heading)}</h2>')
+        row: list[str] = []
+
+        def flush_row():
+            if not row:
+                return
+            parts.append('<div class="portraits">' + "".join(row) + "</div>")
+            row.clear()
+
         for block in blocks:
             if block[0] == "p":
+                flush_row()
                 parts.append(f"<p>{inline(block[1])}</p>")
+            elif is_portrait(block[2]):
+                row.append(figure_html(item, anchor, heading, block[1], block[2]))
             else:
+                flush_row()
                 parts.append(figure_html(item, anchor, heading, block[1], block[2]))
+        flush_row()
         sections_html.append(
             f'<section id="{section_id}" data-review="section" data-lesson="{esc(item["code"])}">'
             + "".join(parts)
