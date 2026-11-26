@@ -221,6 +221,8 @@ h1 { font-size: 40px; line-height: 1.15; font-weight: 700; letter-spacing: -.02e
 }
 h2 { font-size: 28px; line-height: 1.25; margin: 2.2em 0 .6em; }
 p { margin: 0 0 1em; }
+article, .home-mod, #risunki { scroll-margin-top: 24px; }
+article { padding-top: 12px; border-top: 1px solid var(--line); margin-top: 48px; }
 article section { scroll-margin-top: 24px; }
 figure {
   margin: 28px 0;
@@ -280,11 +282,15 @@ figcaption .tag {
 """
 
 
+def lesson_anchor(code: str) -> str:
+    return "urok-" + code.replace(".", "-")
+
+
 def nav(current: str | None, lessons_meta: list[dict]) -> str:
     parts = [
-        '<a class="brand" href="index.html">Школа альпинизма</a>',
+        '<a class="brand" href="#nachalo">Школа альпинизма</a>',
         '<span class="brand-sub">Черновик для замечаний</span>',
-        '<a class="toc-fig" href="risunki.html">Все рисунки</a>',
+        '<a class="toc-fig" href="#risunki">Все рисунки</a>',
     ]
     last_mod = None
     items = []
@@ -297,7 +303,7 @@ def nav(current: str | None, lessons_meta: list[dict]) -> str:
             parts.append(f'<div class="mod">Модуль {item["module"]}</div>')
         cls = ' class="current"' if item["code"] == current else ""
         items.append(
-            f'<li><a{cls} href="{esc(item["file"])}">{esc(item["code"])} {esc(item["title"])}</a></li>'
+            f'<li><a{cls} href="#{lesson_anchor(item["code"])}">{esc(item["code"])} {esc(item["title"])}</a></li>'
         )
     if items:
         parts.append("<ol>" + "".join(items) + "</ol>")
@@ -325,10 +331,11 @@ def page(title: str, body: str, current: str | None, lessons_meta: list[dict]) -
 """
 
 
-def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None, lessons_meta: list[dict]) -> str:
+def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None) -> str:
+    anchor = lesson_anchor(item["code"])
     sections_html = []
     used = set()
-    for index, (heading, paras) in enumerate(item["sections"], start=1):
+    for heading, paras in item["sections"]:
         if not heading and not paras:
             continue
         sid = slug(heading) if heading else "nachalo"
@@ -338,40 +345,40 @@ def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None, le
             sid = f"{base}-{n}"
             n += 1
         used.add(sid)
+        section_id = f"{anchor}-{sid}"
         blocks = []
         if heading:
             blocks.append(f'<h2>{inline(heading)}</h2>')
         blocks.extend(f"<p>{inline(p)}</p>" for p in paras)
         sections_html.append(
-            f'<section id="{sid}" data-review="section" data-lesson="{esc(item["code"])}">'
+            f'<section id="{section_id}" data-review="section" data-lesson="{esc(item["code"])}">'
             + "".join(blocks)
             + "</section>"
         )
     figs = []
     for key, caption, path in item["figures"]:
         src = copy_figure(item["code"], key, path)
+        fig_id = f"fig-{anchor}-{esc(key)}"
         figs.append(
-            f'<figure id="fig-{esc(key)}" data-review="figure" data-lesson="{esc(item["code"])}">'
+            f'<figure id="{fig_id}" data-review="figure" data-lesson="{esc(item["code"])}">'
             f'<img src="{esc(src)}" alt="{esc(caption)}">'
             f'<figcaption><span class="tag">Рисунок урока {esc(item["code"])}</span>{esc(caption)}</figcaption>'
             f"</figure>"
         )
     fig_block = ""
     if figs:
-        fig_block = (
-            '<section id="risunki" data-review="figures" data-lesson="'
-            + esc(item["code"])
-            + '"><h2>Рисунки урока</h2>'
-            + "".join(figs)
-            + "</section>"
-        )
+        fig_block = f'<section id="{anchor}-risunki" data-review="figures" data-lesson="{esc(item["code"])}"><h2>Рисунки урока</h2>' + "".join(figs) + "</section>"
     pager = ['<div class="pager">']
     if prev_item:
-        pager.append(f'<a href="{esc(prev_item["file"])}">← {esc(prev_item["code"])} {esc(prev_item["title"])}</a>')
+        pager.append(
+            f'<a href="#{lesson_anchor(prev_item["code"])}">← {esc(prev_item["code"])} {esc(prev_item["title"])}</a>'
+        )
     else:
         pager.append("<span></span>")
     if next_item:
-        pager.append(f'<a href="{esc(next_item["file"])}">{esc(next_item["code"])} {esc(next_item["title"])} →</a>')
+        pager.append(
+            f'<a href="#{lesson_anchor(next_item["code"])}">{esc(next_item["code"])} {esc(next_item["title"])} →</a>'
+        )
     else:
         pager.append("<span></span>")
     pager.append("</div>")
@@ -379,24 +386,25 @@ def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None, le
         f' Рисунков в уроке: {len(item["figures"])}, они стоят под текстом.'
         if item["figures"] else ""
     )
-    body = (
+    return (
+        f'<article id="{anchor}" data-review="chapter" data-lesson="{esc(item["code"])}">'
         f'<p class="kicker">Модуль {item["module"]} · {esc(item["module_title"])}</p>'
-        f'<h1 id="chapter" data-review="chapter" data-lesson="{esc(item["code"])}">'
-        f'{esc(item["code"])}. {esc(item["title"])}</h1>'
+        f"<h1>{esc(item['code'])}. {esc(item['title'])}</h1>"
         f'<p class="lead">Черновик для замечаний к тексту и к рисункам. Курс не опубликован и не даёт допуска.{esc(fig_note)}</p>'
         + "".join(sections_html)
         + fig_block
         + "".join(pager)
+        + "</article>"
     )
-    return page(f'{item["code"]}. {item["title"]}', body, item["code"], lessons_meta)
 
 
 def render_index(lessons_meta: list[dict]) -> str:
     chunks = [
+        '<div id="nachalo">',
         '<p class="kicker">ФАР · теория для инструкторов-проводников</p>',
         "<h1>Школа альпинизма</h1>",
-        '<p class="lead">53 главы. Замечание оставляйте на странице главы — к заголовку, к разделу или к рисунку под текстом. Курс не опубликован.</p>',
-        '<p><a href="risunki.html">Все рисунки на одном листе</a></p>',
+        '<p class="lead">53 главы на одной странице. Ссылка ведёт к главе или к рисунку здесь же. Курс не опубликован.</p>',
+        '<p><a href="#risunki">Все рисунки</a></p>',
     ]
     last = None
     for item in lessons_meta:
@@ -410,36 +418,44 @@ def render_index(lessons_meta: list[dict]) -> str:
             )
         fig = f'<span>Рисунков: {len(item["figures"])}</span>' if item["figures"] else ""
         chunks.append(
-            f'<a class="card" href="{esc(item["file"])}"><strong>{esc(item["code"])}. {esc(item["title"])}</strong>'
+            f'<a class="card" href="#{lesson_anchor(item["code"])}"><strong>{esc(item["code"])}. {esc(item["title"])}</strong>'
             f"{fig}</a>"
         )
-    chunks.append("</div></div>")
-    return page("Школа альпинизма — черновик", "".join(chunks), None, lessons_meta)
-
-
-def render_figures(lessons_meta: list[dict]) -> str:
-    chunks = [
-        '<p class="kicker">Рисунки курса</p>',
-        "<h1>Все рисунки</h1>",
-        '<p class="lead">Каждая схема стоит отдельно, чтобы к ней можно было оставить замечание. Подпись ведёт в урок.</p>',
-    ]
+    chunks.append("</div></div></div>")
+    for i, item in enumerate(lessons_meta):
+        prev_item = lessons_meta[i - 1] if i else None
+        next_item = lessons_meta[i + 1] if i + 1 < len(lessons_meta) else None
+        chunks.append(render_lesson(item, prev_item, next_item))
+    chunks.append('<section id="risunki"><h1>Все рисунки</h1>')
+    chunks.append('<p class="lead">Схема ведёт к тому месту урока, где она стоит.</p>')
     any_fig = False
     for item in lessons_meta:
         if not item["figures"]:
             continue
         any_fig = True
+        anchor = lesson_anchor(item["code"])
         chunks.append(f'<h2>{esc(item["code"])}. {esc(item["title"])}</h2>')
         for key, caption, path in item["figures"]:
             src = f"img/{item['code']}-{key}{path.suffix.lower()}"
+            fig_id = f"list-{anchor}-{key}"
             chunks.append(
-                f'<figure id="fig-{esc(item["code"])}-{esc(key)}" data-review="figure" data-lesson="{esc(item["code"])}">'
-                f'<a href="{esc(item["file"])}#fig-{esc(key)}"><img src="{esc(src)}" alt="{esc(caption)}"></a>'
-                f'<figcaption><span class="tag">Урок {esc(item["code"])}</span>{esc(caption)}</figcaption>'
+                f'<figure id="{esc(fig_id)}" data-review="figure" data-lesson="{esc(item["code"])}">'
+                f'<a href="#fig-{anchor}-{esc(key)}"><img src="{esc(src)}" alt="{esc(caption)}"></a>'
+                f'<figcaption><span class="tag"><a href="#{anchor}">Урок {esc(item["code"])}</a></span>{esc(caption)}</figcaption>'
                 f"</figure>"
             )
     if not any_fig:
         chunks.append("<p>Файлов рисунков не найдено.</p>")
-    return page("Рисунки курса", "".join(chunks), None, lessons_meta)
+    chunks.append("</section>")
+    chunks.append(
+        "<script>const links=[...document.querySelectorAll('nav a[href^=\"#urok-\"]')];"
+        "function mark(){const hash=location.hash||'';let best='';"
+        "for(const a of links){const href=a.getAttribute('href');"
+        "if(hash===href||hash.startsWith(href+'-')){if(href.length>best.length)best=href;}}"
+        "for(const a of links)a.classList.toggle('current',a.getAttribute('href')===best);}"
+        "addEventListener('hashchange',mark);mark();</script>"
+    )
+    return page("Школа альпинизма — черновик", "".join(chunks), None, lessons_meta)
 
 
 def main() -> None:
@@ -468,16 +484,8 @@ def main() -> None:
     for old in OUT.glob("*.html"):
         old.unlink()
     (OUT / "index.html").write_text(render_index(lessons_meta), encoding="utf-8")
-    (OUT / "risunki.html").write_text(render_figures(lessons_meta), encoding="utf-8")
-    for i, item in enumerate(lessons_meta):
-        prev_item = lessons_meta[i - 1] if i else None
-        next_item = lessons_meta[i + 1] if i + 1 < len(lessons_meta) else None
-        (OUT / item["file"]).write_text(
-            render_lesson(item, prev_item, next_item, lessons_meta),
-            encoding="utf-8",
-        )
     fig_count = sum(len(item["figures"]) for item in lessons_meta)
-    print(f"уроков {len(lessons_meta)}, рисунков {fig_count}, страниц {len(lessons_meta) + 2}")
+    print(f"уроков {len(lessons_meta)}, рисунков {fig_count}, файл review/index.html")
     for item in lessons_meta:
         if item["figures"]:
             names = ", ".join(title for _, title, _ in item["figures"])
