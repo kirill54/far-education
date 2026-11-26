@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Собирает черновик курса в HTML: одна страница на урок и рисунки этого урока.
+"""Собирает черновик курса в одну HTML-страницу.
 
+Рисунок берётся из текста урока, из строки ![подпись](путь), и встаёт в том же разделе.
 Запуск из корня репозитория: python3 review/build.py
-Страницы пишутся в review/. Картинки не копируются: страницы ссылаются на файлы курса.
 """
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import html
 import re
 import shutil
@@ -101,18 +102,22 @@ def lesson_title(markdown: str, lesson) -> str:
     return lesson.slug
 
 
-def parse_sections(markdown: str) -> list[tuple[str, list[str]]]:
-    """Возвращает (заголовок, абзацы). Пустой заголовок — текст до первого ##."""
-    sections: list[tuple[str, list[str]]] = [("", [])]
+IMG_LINE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
+
+
+def parse_sections(markdown: str, base: Path) -> list[tuple[str, list[tuple]]]:
+    """Возвращает (заголовок, блоки). Блок — абзац или рисунок из текста урока."""
+    sections: list[tuple[str, list[tuple]]] = [("", [])]
     buf: list[str] = []
 
     def flush_para():
         text = " ".join(part.strip() for part in buf).strip()
         buf.clear()
         if text:
-            sections[-1][1].append(text)
+            sections[-1][1].append(("p", text))
 
     for line in markdown.splitlines():
+        image = IMG_LINE.match(line.strip())
         if line.startswith("# "):
             flush_para()
             continue
@@ -120,12 +125,29 @@ def parse_sections(markdown: str) -> list[tuple[str, list[str]]]:
             flush_para()
             sections.append((line[3:].strip(), []))
             continue
+        if image:
+            flush_para()
+            alt, rel = image.group(1), image.group(2)
+            path = (base / rel).resolve()
+            if not path.is_file():
+                raise SystemExit(f"Нет рисунка {path} из {base}")
+            sections[-1][1].append(("img", alt, path))
+            continue
         if not line.strip():
             flush_para()
             continue
         buf.append(line)
     flush_para()
-    return [(title, paras) for title, paras in sections if paras or title]
+    return [(title, blocks) for title, blocks in sections if blocks or title]
+
+
+def section_figures(sections: list[tuple[str, list[tuple]]]) -> list[tuple[str, str, Path]]:
+    found = []
+    for heading, blocks in sections:
+        for block in blocks:
+            if block[0] == "img":
+                found.append((heading, block[1], block[2]))
+    return found
 
 
 def figures_for(lesson) -> list[tuple[str, str, Path]]:
@@ -298,7 +320,7 @@ def nav(current: str | None, lessons_meta: list[dict]) -> str:
     parts = [
         '<a class="brand" href="#nachalo">Школа альпинизма</a>',
         '<span class="brand-sub">Черновик для замечаний</span>',
-        '<a class="toc-fig" href="#risunki">Все рисунки</a>',
+        '<a class="toc-fig" href="#risunki">Рисунки по урокам</a>',
     ]
     last_mod = None
     items = []
@@ -339,12 +361,24 @@ def page(title: str, body: str, current: str | None, lessons_meta: list[dict]) -
 """
 
 
+def figure_html(item: dict, anchor: str, heading: str, caption: str, path: Path) -> str:
+    src = image_src(path)
+    fig_id = f"fig-{anchor}-{slug(path.stem)}"
+    where = f"Урок {item['code']} · {heading}" if heading else f"Урок {item['code']}"
+    return (
+        f'<figure id="{fig_id}" data-review="figure" data-lesson="{esc(item["code"])}">'
+        f'<img src="{esc(src)}" alt="{esc(caption)}">'
+        f'<figcaption><span class="tag">{esc(where)}</span>{esc(caption)}</figcaption>'
+        f"</figure>"
+    )
+
+
 def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None) -> str:
     anchor = lesson_anchor(item["code"])
     sections_html = []
     used = set()
-    for heading, paras in item["sections"]:
-        if not heading and not paras:
+    for heading, blocks in item["sections"]:
+        if not heading and not blocks:
             continue
         sid = slug(heading) if heading else "nachalo"
         base = sid
@@ -354,28 +388,19 @@ def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None) ->
             n += 1
         used.add(sid)
         section_id = f"{anchor}-{sid}"
-        blocks = []
+        parts = []
         if heading:
-            blocks.append(f'<h2>{inline(heading)}</h2>')
-        blocks.extend(f"<p>{inline(p)}</p>" for p in paras)
+            parts.append(f'<h2>{inline(heading)}</h2>')
+        for block in blocks:
+            if block[0] == "p":
+                parts.append(f"<p>{inline(block[1])}</p>")
+            else:
+                parts.append(figure_html(item, anchor, heading, block[1], block[2]))
         sections_html.append(
             f'<section id="{section_id}" data-review="section" data-lesson="{esc(item["code"])}">'
-            + "".join(blocks)
+            + "".join(parts)
             + "</section>"
         )
-    figs = []
-    for key, caption, path in item["figures"]:
-        src = image_src(path)
-        fig_id = f"fig-{anchor}-{esc(key)}"
-        figs.append(
-            f'<figure id="{fig_id}" data-review="figure" data-lesson="{esc(item["code"])}">'
-            f'<img src="{esc(src)}" alt="{esc(caption)}">'
-            f'<figcaption><span class="tag">Рисунок урока {esc(item["code"])}</span>{esc(caption)}</figcaption>'
-            f"</figure>"
-        )
-    fig_block = ""
-    if figs:
-        fig_block = f'<section id="{anchor}-risunki" data-review="figures" data-lesson="{esc(item["code"])}"><h2>Рисунки урока</h2>' + "".join(figs) + "</section>"
     pager = ['<div class="pager">']
     if prev_item:
         pager.append(
@@ -391,7 +416,7 @@ def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None) ->
         pager.append("<span></span>")
     pager.append("</div>")
     fig_note = (
-        f' Рисунков в уроке: {len(item["figures"])}, они стоят под текстом.'
+        f' Рисунков в уроке: {len(item["figures"])}. Каждый стоит в своём разделе.'
         if item["figures"] else ""
     )
     return (
@@ -400,7 +425,6 @@ def render_lesson(item: dict, prev_item: dict | None, next_item: dict | None) ->
         f"<h1>{esc(item['code'])}. {esc(item['title'])}</h1>"
         f'<p class="lead">Черновик для замечаний к тексту и к рисункам. Курс не опубликован и не даёт допуска.{esc(fig_note)}</p>'
         + "".join(sections_html)
-        + fig_block
         + "".join(pager)
         + "</article>"
     )
@@ -411,8 +435,8 @@ def render_index(lessons_meta: list[dict]) -> str:
         '<div id="nachalo">',
         '<p class="kicker">ФАР · теория для инструкторов-проводников</p>',
         "<h1>Школа альпинизма</h1>",
-        '<p class="lead">53 главы на одной странице. Ссылка ведёт к главе или к рисунку здесь же. Курс не опубликован.</p>',
-        '<p><a href="#risunki">Все рисунки</a></p>',
+        '<p class="lead">53 главы на одной странице. Рисунок стоит внутри своего урока, в том разделе, который он поясняет. Курс не опубликован.</p>',
+        '<p><a href="#risunki">Рисунки по урокам</a></p>',
     ]
     last = None
     for item in lessons_meta:
@@ -434,24 +458,23 @@ def render_index(lessons_meta: list[dict]) -> str:
         prev_item = lessons_meta[i - 1] if i else None
         next_item = lessons_meta[i + 1] if i + 1 < len(lessons_meta) else None
         chunks.append(render_lesson(item, prev_item, next_item))
-    chunks.append('<section id="risunki"><h1>Все рисунки</h1>')
-    chunks.append('<p class="lead">Схема ведёт к тому месту урока, где она стоит.</p>')
+    chunks.append('<section id="risunki"><h1>Рисунки по урокам</h1>')
+    chunks.append('<p class="lead">Список только переходит к схеме. Сама схема стоит в разделе своего урока.</p>')
     any_fig = False
     for item in lessons_meta:
         if not item["figures"]:
             continue
         any_fig = True
         anchor = lesson_anchor(item["code"])
-        chunks.append(f'<h2>{esc(item["code"])}. {esc(item["title"])}</h2>')
-        for key, caption, path in item["figures"]:
-            src = image_src(path)
-            fig_id = f"list-{anchor}-{key}"
+        chunks.append(
+            f'<h2><a href="#{anchor}">{esc(item["code"])}. {esc(item["title"])}</a></h2><ul>'
+        )
+        for heading, caption, path in item["figures"]:
+            fig_id = f"fig-{anchor}-{slug(path.stem)}"
             chunks.append(
-                f'<figure id="{esc(fig_id)}" data-review="figure" data-lesson="{esc(item["code"])}">'
-                f'<a href="#fig-{anchor}-{esc(key)}"><img src="{esc(src)}" alt="{esc(caption)}"></a>'
-                f'<figcaption><span class="tag"><a href="#{anchor}">Урок {esc(item["code"])}</a></span>{esc(caption)}</figcaption>'
-                f"</figure>"
+                f'<li><a href="#{fig_id}">{esc(caption)}</a> — раздел «{esc(heading)}»</li>'
             )
+        chunks.append("</ul>")
     if not any_fig:
         chunks.append("<p>Файлов рисунков не найдено.</p>")
     chunks.append("</section>")
@@ -474,7 +497,7 @@ def main() -> None:
             raise SystemExit(f"Нет главы: {path}")
         markdown = path.read_text(encoding="utf-8")
         module = int(lesson.code.split(".")[0])
-        sections = parse_sections(markdown)
+        sections = parse_sections(markdown, path.parent)
         lessons_meta.append({
             "code": lesson.code,
             "slug": lesson.slug,
@@ -483,8 +506,13 @@ def main() -> None:
             "module_title": MODULES[module],
             "title": lesson_title(markdown, lesson),
             "sections": sections,
-            "figures": figures_for(lesson),
+            "figures": section_figures(sections),
         })
+        placed = {hashlib.sha256(figure[2].read_bytes()).digest() for figure in section_figures(sections)}
+        for _key, title, figure_path in figures_for(lesson):
+            digest = hashlib.sha256(figure_path.read_bytes()).digest()
+            if digest not in placed:
+                raise SystemExit(f"Рисунок «{title}» не встроен в урок {lesson.code}")
     img_dir = OUT / "img"
     if img_dir.exists():
         shutil.rmtree(img_dir)
